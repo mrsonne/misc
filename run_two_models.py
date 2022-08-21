@@ -25,7 +25,7 @@ ys_model2 = generate_data(xs_model2, pars_model2, sigma_model2)
 xs_all = np.concatenate((xs_model1, xs_model2))
 ys_all = np.concatenate((ys_model1, ys_model2))
 
-fig, axs = plt.subplots(2, 2, figsize=(16, 12), sharex=True)
+fig, axs = plt.subplots(2, 2, figsize=(16, 12))
 plot(
     xs_model1,
     ys_model1,
@@ -101,5 +101,14 @@ plot(
 
 for ax in axs.flat:
     ax.legend()
+
+ymins, ymaxs = zip(*[ax.get_ylim() for ax in axs[:, 1]])
+ymin = min(ymins)
+ymax = max(ymaxs)
+[ax.set_ylim((ymin, ymax)) for ax in axs[:, 1]]
+xmins, xmaxs = zip(*[ax.get_xlim() for ax in axs[:, 1]])
+xmin = min(xmins)
+xmax = max(xmaxs)
+[ax.set_xlim((xmin, xmax)) for ax in axs[:, 1]]
 
 fig.savefig("two-models.png")

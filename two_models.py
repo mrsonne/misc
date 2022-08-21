@@ -11,5 +11,13 @@ def generate_data(xs, pars, sigma):
     return model(xs, *pars) + np.random.normal(0.0, sigma, xs.size)
 
 
-def plot(xpoints, ypoints, ax, marker="x", color="blue"):
-    ax.plot(xpoints, ypoints, marker=marker, linewidth=0, color=color)
+def plot(xpoints, ypoints, ax, marker="x", color="blue", linewidth=0, label=""):
+    ax.plot(
+        xpoints,
+        ypoints,
+        marker=marker,
+        linewidth=linewidth,
+        color=color,
+        label=label,
+        markerfacecolor="none",
+    )

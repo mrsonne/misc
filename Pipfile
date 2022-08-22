@@ -8,6 +8,7 @@ numpy = "*"
 scipy = "*"
 matplotlib = "*"
 pymc3 = "*"
+seaborn = "*"
 
 [dev-packages]
 black = "*"

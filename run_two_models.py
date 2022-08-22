@@ -117,4 +117,5 @@ xmin = min(xmins)
 xmax = max(xmaxs)
 [ax.set_xlim((xmin, xmax)) for ax in axs[:, 1]]
 
+fig.tight_layout()
 fig.savefig("two-models.png")

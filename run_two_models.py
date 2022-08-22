@@ -3,20 +3,26 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from two_models import generate_data, plot, model, plot_parameters
 
+# https://docs.pymc.io/en/v3/pymc-examples/examples/generalized_linear_models/GLM-linear.html
+
 np.random.seed(0)
+
 sigma = 0.5
+pars_model1 = 1.0, 1.0
+pars_model2 = -1.0, 1.0
+
 irow_1_model = 0
 irow_2_models = 1
 print(f"sigma {sigma}")
 
+# First data set
 xmin, xmax = -1, 1
-pars_model1 = 1.0, 1.0
 sigma_model1 = sigma
 n_model1 = 10
 xs_model1 = np.linspace(xmin, xmax, n_model1)
 ys_model1 = generate_data(xs_model1, pars_model1, sigma_model1)
 
-pars_model2 = -1.0, 1.0
+# Second data set
 sigma_model2 = sigma
 n_model2 = 10
 xs_model2 = np.linspace(xmin, xmax, n_model2)
@@ -25,7 +31,7 @@ ys_model2 = generate_data(xs_model2, pars_model2, sigma_model2)
 xs_all = np.concatenate((xs_model1, xs_model2))
 ys_all = np.concatenate((ys_model1, ys_model2))
 
-fig, axs = plt.subplots(2, 2, figsize=(16, 12))
+fig, axs = plt.subplots(2, 2, figsize=(16, 16))
 plot(
     xs_model1,
     ys_model1,

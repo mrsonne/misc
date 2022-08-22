@@ -2,6 +2,31 @@ import numpy as np
 from percentiles2d import plot_cov_ellipse
 
 
+def make_data():
+    sigma = 0.5
+    pars_model1 = 1.0, 1.0
+    pars_model2 = -1.0, 1.0
+
+    print(f"sigma {sigma}")
+
+    # First data set
+    xmin, xmax = -1, 1
+    sigma_model1 = sigma
+    n_model1 = 10
+    xs_model1 = np.linspace(xmin, xmax, n_model1)
+    ys_model1 = generate_data(xs_model1, pars_model1, sigma_model1)
+
+    # Second data set
+    sigma_model2 = sigma
+    n_model2 = 10
+    xs_model2 = np.linspace(xmin, xmax, n_model2)
+    ys_model2 = generate_data(xs_model2, pars_model2, sigma_model2)
+
+    xs_all = np.concatenate((xs_model1, xs_model2))
+    ys_all = np.concatenate((ys_model1, ys_model2))
+    return xs_model1, ys_model1, xs_model2, ys_model2, xs_all, ys_all
+
+
 def model(x, a, b):
     # two-parameter model.
     return a * x + b

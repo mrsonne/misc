@@ -1,9 +1,11 @@
+"""
+Attempt to classify data in term of which model created the data and learn the models.
+Should also attempt to figure out how many models is best (AIC or BIC)
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from two_models import make_data, plot, model, plot_parameters
-
-# https://docs.pymc.io/en/v3/pymc-examples/examples/generalized_linear_models/GLM-linear.html
 
 np.random.seed(0)
 irow_1_model = 0

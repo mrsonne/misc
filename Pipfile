@@ -9,6 +9,7 @@ scipy = "*"
 matplotlib = "*"
 pymc3 = "*"
 seaborn = "*"
+scikit-learn = "*"
 
 [dev-packages]
 black = "*"

@@ -3,9 +3,10 @@ from percentiles2d import plot_cov_ellipse
 
 
 def make_data():
-    sigma = 0.5
+    sigma = 0.25
     pars_model1 = 1.0, 1.0
-    pars_model2 = -1.0, 1.0
+    # pars_model2 = 0.0, 1.0
+    pars_model2 = 0.0, 0.0  # tricky
 
     print(f"sigma {sigma}")
 

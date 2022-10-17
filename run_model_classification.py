@@ -14,26 +14,40 @@ from sklearn.mixture import GaussianMixture
 from two_models import make_data, plot, model, plot_parameters, plot_cov_ellipse
 
 np.random.seed(0)
-irow_1_model = 0
-irow_2_models = 1
 xs_model1, ys_model1, xs_model2, ys_model2, xs_all, ys_all = make_data()
 
-fig, axs = plt.subplots(2, 2, figsize=(16, 16))
+fig, axs = plt.subplots(2, 3, figsize=(24, 16))
+colors = "red", "blue"
+
+axs[0, 0].plot(xs_all, ys_all, "ok")
+axs[0, 0].set_title("All data")
+axs[0, 1].set_title("All data divided in true groups. Model fit in each group.")
+axs[0, 2].set_title("All data in R-space. GMM classes + components.")
+axs[1, 0].set_title("All data in true group. GMM prediction + log-likelihood.")
+axs[1, 1].set_title(
+    "All data divided in groups (true & predicted). Model fit in each predicted group."
+)
+
+axs[1, 1].set_title(
+    "All data divided in true groups. Model fit in each true & predicted group."
+)
+
+
 plot(
     xs_model1,
     ys_model1,
-    axs[irow_2_models, 0],
+    axs[0, 1],
     marker="x",
-    color="blue",
-    label=f"Data model 1",
+    color=colors[0],
+    label=f"Data model A",
 )
 plot(
     xs_model2,
     ys_model2,
-    axs[irow_2_models, 0],
+    axs[0, 1],
     marker="x",
-    color="magenta",
-    label=f"Data model 2",
+    color=colors[1],
+    label=f"Data model B",
 )
 
 
@@ -44,22 +58,13 @@ print(data.shape)
 n_models = 2
 sets = np.split(data, n_models)
 
-colors = "red", "blue"
 # Sum of squared residualts
 rs = []
 for iset, (set, color) in enumerate(zip(sets, colors)):
     plot(
         set[:, 0],
         set[:, 1],
-        axs[0, 0],
-        color=color,
-        label=f"Set {iset}",
-    )
-
-    plot(
-        set[:, 0],
-        set[:, 1],
-        axs[1, 0],
+        axs[0, 1],
         color=color,
         label=f"Set {iset}",
     )
@@ -68,6 +73,14 @@ for iset, (set, color) in enumerate(zip(sets, colors)):
         set[:, 0],
         set[:, 1],
         axs[1, 1],
+        color=color,
+        label=f"Set {iset}",
+    )
+
+    plot(
+        set[:, 0],
+        set[:, 1],
+        axs[1, 2],
         color=color,
         label=f"Set {iset}",
     )
@@ -82,16 +95,16 @@ for iset, (set, color) in enumerate(zip(sets, colors)):
     plot(
         xs_all,
         ys_all_pred,
-        axs[0, 0],
+        axs[0, 1],
         linewidth=1,
         color=color,
-        label=f"Model: {popt}",
+        label=f"Model for set {popt}",
     )
 
     plot(
         xs_all,
         ys_all_pred,
-        axs[1, 1],
+        axs[1, 2],
         linewidth=1,
         color=color,
         label=f"Model real split: {popt}",
@@ -99,41 +112,93 @@ for iset, (set, color) in enumerate(zip(sets, colors)):
 
     # Collect residual for all data point in current model
     r = (ys_all - ys_all_pred) ** 2
+    sigma_sq = np.mean(r)
+    r = r / (2 * sigma_sq)  # - len(ys_all) / 2 * np.log(sigma_sq)
     # r = ys_all - ys_all_pred
     rs.append(r)
 
 #  (n_samples, n_features)
 X = np.stack(rs, axis=1)
 print(X.shape)
-gm = GaussianMixture(n_components=n_models, random_state=0)
+covariance_type = "tied"
+gm = GaussianMixture(
+    n_components=n_models, random_state=0, covariance_type=covariance_type
+)
 labels = gm.fit_predict(X)
 label_ids = range(n_models)
 
+
+plot(
+    xs_model1,
+    ys_model1,
+    axs[1, 0],
+    marker="x",
+    color=colors[0],
+    label=f"Data model A",
+)
+plot(
+    xs_model2,
+    ys_model2,
+    axs[1, 0],
+    marker="x",
+    color=colors[1],
+    label=f"Data model A",
+)
+
 proba = gm.predict_proba(X)
-print(proba)
+size = 500 * proba[:, 0]
+axs[1, 0].scatter(
+    xs_all,
+    ys_all,
+    s=size,
+    facecolors="None",
+    edgecolors=colors[0],
+    label="log-likelihood model 1",
+)
+size = 500 * proba[:, 1]
+axs[1, 0].scatter(
+    xs_all,
+    ys_all,
+    s=size,
+    facecolors="None",
+    edgecolors=colors[1],
+    label="log-likelihood model 2",
+)
 
 
 # shape: (n_components, n_features)
 means = gm.means_
 covs = gm.covariances_
 
+
 for mean, cov, color, label in zip(means, covs, colors, label_ids):
+    if covariance_type in ["diag"]:
+        cov_ = np.zeros((n_models, n_models))
+        np.fill_diagonal(cov_, cov)
+        print(cov_)
+    elif covariance_type == "tied":
+        cov_ = covs
+    else:
+        cov_ = cov
 
     # Plot GMM elipses
     axs[0, 1].plot(mean[0], mean[1], "+k", markersize=20)
     plot_cov_ellipse(
-        cov, mean, nstd=2, ax=axs[0, 1], color=color, zorder=-1000, alpha=0.3
+        cov_, mean, nstd=2, ax=axs[0, 2], color=color, zorder=-1000, alpha=0.3
     )
 
     # Plot GMM input data colored according to predicted classes
-    axs[0, 1].plot(rs[0][labels == label], rs[1][labels == label], "o", color=color)
+    axs[0, 2].plot(rs[0][labels == label], rs[1][labels == label], "o", color=color)
 
     # Plot original data with label color
     xs_ = xs_all[labels == label]
     ys_ = ys_all[labels == label]
+    xs_, ys_ = zip(*sorted(zip(xs_, ys_)))
+    xs_ = np.array(xs_)
+    ys_ = np.array(ys_)
     popt, _ = curve_fit(model, xs_, ys_)
 
-    axs[1, 0].plot(
+    axs[1, 1].plot(
         xs_,
         ys_,
         "o",
@@ -146,7 +211,7 @@ for mean, cov, color, label in zip(means, covs, colors, label_ids):
     ys_pred = model(xs_, *popt)
 
     # Plot prediction on original data split according to predicted classes
-    axs[1, 1].plot(
+    axs[1, 2].plot(
         xs_,
         ys_pred,
         linestyle="dashed",
@@ -155,7 +220,7 @@ for mean, cov, color, label in zip(means, covs, colors, label_ids):
         label=f"Model cls split: {popt}",
     )
 
-    axs[1, 0].plot(
+    axs[1, 1].plot(
         xs_,
         ys_pred,
         linestyle="dashed",
@@ -165,8 +230,8 @@ for mean, cov, color, label in zip(means, covs, colors, label_ids):
     )
 
 
-axs[0, 1].set_xlabel("R model 1")
-axs[0, 1].set_ylabel("R model 2")
+axs[0, 2].set_xlabel("R in model 1")
+axs[0, 2].set_ylabel("R in model 2")
 
 for ax in axs.flat:
     ax.legend()

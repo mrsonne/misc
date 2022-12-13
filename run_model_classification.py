@@ -120,7 +120,7 @@ for iset, (set, color) in enumerate(zip(sets, colors)):
 #  (n_samples, n_features)
 X = np.stack(rs, axis=1)
 print(X.shape)
-covariance_type = "tied"
+covariance_type = "diag"
 gm = GaussianMixture(
     n_components=n_models, random_state=0, covariance_type=covariance_type
 )

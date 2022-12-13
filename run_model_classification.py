@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from sklearn.mixture import GaussianMixture
+from sklearn.cluster import KMeans, DBSCAN
 from two_models import make_data, plot, model, plot_parameters, plot_cov_ellipse
 
 np.random.seed(0)
@@ -99,6 +100,7 @@ for iset, (set, color) in enumerate(zip(sets, colors)):
         linewidth=1,
         color=color,
         label=f"Model for set {popt}",
+        marker=None,
     )
 
     plot(
@@ -108,23 +110,36 @@ for iset, (set, color) in enumerate(zip(sets, colors)):
         linewidth=1,
         color=color,
         label=f"Model real split: {popt}",
+        marker=None,
     )
 
     # Collect residual for all data point in current model
     r = (ys_all - ys_all_pred) ** 2
     sigma_sq = np.mean(r)
-    r = r / (2 * sigma_sq)  # - len(ys_all) / 2 * np.log(sigma_sq)
+    # r = r / (2 * sigma_sq)  # - len(ys_all) / 2 * np.log(sigma_sq)
+    r = r / sigma_sq
     # r = ys_all - ys_all_pred
     rs.append(r)
 
 #  (n_samples, n_features)
 X = np.stack(rs, axis=1)
 print(X.shape)
+
+# GMM
 covariance_type = "diag"
-gm = GaussianMixture(
-    n_components=n_models, random_state=0, covariance_type=covariance_type
+clsfier = GaussianMixture(
+    n_components=n_models,
+    random_state=0,
+    covariance_type=covariance_type,
+    reg_covar=1e-3,
 )
-labels = gm.fit_predict(X)
+
+# clsfier = KMeans(n_clusters=n_models, random_state=0)
+# clsfier = DBSCAN(eps=5, min_samples=10)
+
+labels = clsfier.fit_predict(X)
+print(labels)
+
 label_ids = range(n_models)
 
 
@@ -145,47 +160,49 @@ plot(
     label=f"Data model A",
 )
 
-proba = gm.predict_proba(X)
-size = 500 * proba[:, 0]
-axs[1, 0].scatter(
-    xs_all,
-    ys_all,
-    s=size,
-    facecolors="None",
-    edgecolors=colors[0],
-    label="log-likelihood model 1",
-)
-size = 500 * proba[:, 1]
-axs[1, 0].scatter(
-    xs_all,
-    ys_all,
-    s=size,
-    facecolors="None",
-    edgecolors=colors[1],
-    label="log-likelihood model 2",
-)
 
-
-# shape: (n_components, n_features)
-means = gm.means_
-covs = gm.covariances_
-
-
-for mean, cov, color, label in zip(means, covs, colors, label_ids):
-    if covariance_type in ["diag"]:
-        cov_ = np.zeros((n_models, n_models))
-        np.fill_diagonal(cov_, cov)
-        print(cov_)
-    elif covariance_type == "tied":
-        cov_ = covs
-    else:
-        cov_ = cov
-
-    # Plot GMM elipses
-    axs[0, 1].plot(mean[0], mean[1], "+k", markersize=20)
-    plot_cov_ellipse(
-        cov_, mean, nstd=2, ax=axs[0, 2], color=color, zorder=-1000, alpha=0.3
+if isinstance(clsfier, GaussianMixture):
+    proba = clsfier.predict_proba(X)
+    size = 500 * proba[:, 0]
+    axs[1, 0].scatter(
+        xs_all,
+        ys_all,
+        s=size,
+        facecolors="None",
+        edgecolors=colors[0],
+        label="log-likelihood model 1",
     )
+    size = 500 * proba[:, 1]
+    axs[1, 0].scatter(
+        xs_all,
+        ys_all,
+        s=size,
+        facecolors="None",
+        edgecolors=colors[1],
+        label="log-likelihood model 2",
+    )
+
+    # shape: (n_components, n_features)
+    means = clsfier.means_
+    covs = clsfier.covariances_
+
+    for mean, cov, color, label in zip(means, covs, colors, label_ids):
+        if covariance_type in ["diag"]:
+            cov_ = np.zeros((n_models, n_models))
+            np.fill_diagonal(cov_, cov)
+            print(cov_)
+        elif covariance_type == "tied":
+            cov_ = covs
+        else:
+            cov_ = cov
+
+        # Plot GMM elipses
+        axs[0, 1].plot(mean[0], mean[1], "+k", markersize=20)
+        plot_cov_ellipse(
+            cov_, mean, nstd=2, ax=axs[0, 2], color=color, zorder=-1000, alpha=0.3
+        )
+
+for color, label in zip(colors, label_ids):
 
     # Plot GMM input data colored according to predicted classes
     axs[0, 2].plot(rs[0][labels == label], rs[1][labels == label], "o", color=color)

@@ -1,3 +1,5 @@
+# %% Imports
+
 # https://stats.stackexchange.com/questions/185812/regression-mixture-in-pymc3
 
 
@@ -8,7 +10,8 @@ import pymc3 as pm
 
 # import seaborn as sns
 
-#  Data
+# %% Data
+
 np.random.seed(123)
 alpha = 0
 sigma = 1
@@ -33,7 +36,7 @@ X1 = np.append(X1_1, X1_2)
 Y = np.append(Y1, Y2)
 
 
-#  Model
+# %% Model
 
 basic_model = pm.Model()
 
@@ -63,19 +66,32 @@ with basic_model:
 with basic_model:
     step1 = pm.Metropolis([p, alpha, beta_1, sigma])
     step2 = pm.BinaryMetropolis([category], scaling=0.01)
-    trace = pm.sample(100000, [step1, step2], progressbar=True)
-
-# pm.traceplot(trace)
-
-#  Plotting
+    trace = pm.sample(20000, [step1, step2], progressbar=True)
 
 
+# %% Plotting: checks
+
+import arviz as az
+
+# Gives errors
+axs = az.plot_trace(trace)
+fig = axs[0, 0].get_figure()
+fig.savefig("regmix-trace.png")
+
+# %% Plotting: results
 p_cat = np.apply_along_axis(np.mean, 0, trace["category"])
-print(p_cat)
-fig, axes = plt.subplots(1, 1, figsize=(10, 4))
-axes.scatter(X1, Y, c=p_cat, cmap="coolwarm")
+# print(p_cat)
+fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+ax.scatter(X1, Y, c=p_cat, cmap="coolwarm")
+ax.set_ylabel("Y")
+ax.set_xlabel("X1")
 
-axes.set_ylabel("Y")
-axes.set_xlabel("X1")
+fig.savefig("regmix-classes.png")
 
-fig.savefig("regmix.png")
+
+counts, bins = np.histogram(p_cat, bins=25)
+fig, ax = plt.subplots(1, 1)
+ax.hist(bins[:-1], bins, weights=counts)
+ax.set_ylabel("count")
+ax.set_xlabel("p_cat")
+fig.savefig("regmix-p_cat-dist.png")

@@ -7,6 +7,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
+import theano.tensor as tt
 
 # import seaborn as sns
 
@@ -49,6 +50,13 @@ with basic_model:
     beta_1 = pm.Normal("beta_1", mu=0, sd=100, shape=2)  # Betas.  Two of them.
     sigma = pm.Uniform("sigma", 0, 20)  # Noise
 
+    # https://docs.pymc.io/en/v3/pymc-examples/examples/mixture_models/gaussian_mixture_model.html
+    # Break the symmetry. beta_1 array should always be sorted in
+    # increasing order so it's easier to compare and average over chains
+    order_slopes_potential = pm.Potential(
+        "order_slopes_potential", tt.switch(beta_1[1] - beta_1[0] < 0, -np.inf, 0)
+    )
+
     category = pm.Bernoulli(
         "category", p=p, shape=size * 2
     )  # Classification of each observation
@@ -65,11 +73,33 @@ with basic_model:
     step1 = pm.Metropolis([p, alpha, beta_1, sigma])
     # non-default scaling is importtant
     step2 = pm.BinaryMetropolis([category], scaling=0.01)
-    trace = pm.sample(20000, [step1, step2], progressbar=True)
 
+    # the classification part converges to different categories
+    trace = pm.sample(
+        20000,
+        [step1, step2],
+        progressbar=True,
+        return_inferencedata=False,
+        start={"beta_1": [-1, 1]},  #
+    )
+
+
+# %% post simulation calcs
+# print(trace)
+# print(trace.sample_stats)
+# https://python.arviz.org/en/stable/getting_started/WorkingWithInferenceData.html
+# post = trace.posterior
+# print(post["beta_1"])
+# print(post.mean(dim=['chain', 'draw']))
+# print(post.mean(dim=["draw"]))
+# trace.sel(chain=[0, 2])
+# stacked = az.extract(trace)
+# idata.sel(draw=slice(100, None))
 
 alpha_mean = np.apply_along_axis(np.mean, 0, trace["alpha"])
+beta_1_mean = np.apply_along_axis(np.mean, 0, trace["beta_1"])
 print(alpha_mean)
+print(beta_1_mean)
 
 
 # %% Plotting: checks
@@ -83,7 +113,7 @@ fig.savefig("regmix-trace.png")
 
 # %% Plotting: results
 
-# this mean averages "how many times in the trace 
+# this mean averages "how many times in the trace
 # a point is averaged as either 0 or 1"
 # the mean of the mean should give some center value that can be used to categorize
 p_cat = np.apply_along_axis(np.mean, 0, trace["category"])
@@ -130,7 +160,7 @@ ax.plot(trace["beta_1"][:, 0])
 ax.plot(trace["beta_1"][:, 1])
 fig.savefig("regmix-beta-trace.png")
 
-counts, bins = np.histogram(trace["beta_1"][:, 1], bins=50)
+counts, bins = np.histogram(trace["beta_1"], bins=50)
 beta_1_mean = np.apply_along_axis(np.mean, 0, trace["beta_1"])
 print(beta_1_mean)
 fig, ax = plt.subplots(1, 1)
@@ -146,12 +176,17 @@ print(trace["category"].shape)
 category_trace = trace["category"]
 # get the mean models
 beta1_trace = trace["beta_1"]
-beta1_trace = beta1_trace[:,0]
+beta1_trace = beta1_trace[:, 0]
 # beta_1_mean = np.apply_along_axis(np.mean, 0, beta1_trace)
 # print(beta_1_mean)
-print(beta1_trace.shape
-beta_1_mean  = beta1_trace[category_trace == 0].mean()
-print(beta_1_mean)
+print(beta1_trace.shape)
+# beta_1_mean  = beta1_trace[category_trace == 0].mean()
+# print(beta_1_mean)
 
 
 print(pm.__version__)
+
+print(trace["b1"])
+fig, ax = plt.subplots(1, 1)
+ax.plot(trace["b1"][:, 0])
+ax.plot(trace["b1"][:, 1])

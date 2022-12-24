@@ -164,23 +164,27 @@ fig, ax = plt.subplots(1, 1, figsize=(10, 4))
 if n_components == 1:
     p_cat = np.ones(size, dtype="int")
     cat = np.zeros(size)
+    categories = sorted(np.unique(cat))
     category_trace = [0] * len(trace["b0"])
     b1_trace = np.atleast_2d(trace["b1"])
 elif n_components == 2:
     p_cat = np.apply_along_axis(np.mean, 0, trace["category"])
-    cat = p_cat - np.mean(p_cat) < 0
+    cat = p_cat - np.mean(p_cat) > 0
+    cat = cat.astype(int)
+    categories = sorted(np.unique(cat))
     category_trace = trace["category"]
     b1_trace = np.transpose(trace["b1"])
 
-    # print(p_cat)
-ax.scatter(X1, Y, c=p_cat, cmap="coolwarm")
-ax.set_ylabel("Y")
-ax.set_xlabel("X1")
 
 x_model = np.linspace(-3, 3)
-for b1_mean_val in b1_mean:
-    y_model = b0_mean + b1_mean_val * x_model
+for icat in categories:
+    y_model = b0_mean + b1_mean[icat] * x_model
+    # print(p_cat)
+    ax.scatter(X1[cat == icat], Y[cat == icat], alpha=1)
     ax.plot(x_model, y_model, "-")
+
+ax.set_ylabel("Y")
+ax.set_xlabel("X1")
 fig.savefig("regmix-classes.png")
 
 

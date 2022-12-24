@@ -181,8 +181,16 @@ x_model = np.linspace(-3, 3)
 for icat in categories:
     y_model = b0_mean + b1_mean[icat] * x_model
     # print(p_cat)
-    ax.scatter(X1[cat == icat], Y[cat == icat], alpha=p_cat[cat == icat])
-    ax.plot(x_model, y_model, "-")
+    (l,) = ax.plot(x_model, y_model, "-")
+    color = l.get_color()
+    ax.scatter(
+        X1[cat == icat],
+        Y[cat == icat],
+        s=144,
+        marker="o",
+        edgecolor=color,
+        facecolor=(0, 1, 0, 0.5),
+    )
 
 ax.set_ylabel("Y")
 ax.set_xlabel("X1")

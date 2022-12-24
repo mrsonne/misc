@@ -28,12 +28,8 @@ def c1(X1, Y, return_inferencedata: bool = False):
         return trace
 
 
-def c3(X1, Y):
-    ...
-
-
 def c2(X1, Y, return_inferencedata: bool = False):
-    """Two component model
+    """Two component model that uses BinaryMetropolis
     Modified from https://stats.stackexchange.com/questions/185812/regression-mixture-in-pymc3
     """
     n_components = 2
@@ -41,10 +37,10 @@ def c2(X1, Y, return_inferencedata: bool = False):
     basic_model = pm.Model()
     with basic_model:
         p = pm.Uniform("p", 0, 1)  # Proportion in each mixture
-
         b0 = pm.Normal("b0", mu=0, sd=10)  # Intercept
-        b1 = pm.Normal("b1", mu=0, sd=100, shape=n_components)  # Betas.  Two of them.
+        b1 = pm.Normal("b1", mu=0, sd=100, shape=n_components)  # slopes
         sigma = pm.Uniform("sigma", 0, 20)  # Noise
+        # sigma = pm.HalfCauchy("sigma", beta=10, testval=1.0)
 
         # https://docs.pymc.io/en/v3/pymc-examples/examples/mixture_models/gaussian_mixture_model.html
         # Break the symmetry. b1 array should always be sorted in
@@ -79,10 +75,71 @@ def c2(X1, Y, return_inferencedata: bool = False):
             [step1, step2],
             progressbar=True,
             return_inferencedata=return_inferencedata,
-            start={"b1": np.linspace(-1, 1, n_components)},  #
+            initvals={"b1": np.linspace(-1, 1, n_components)},  #
+            # tune=10000,
         )
 
     return trace
+
+
+def cn(X1, Y, n_components, return_inferencedata: bool = False):
+    """Modified from
+    https://docs.pymc.io/en/v3/pymc-examples/examples/mixture_models/gaussian_mixture_model.html
+    """
+    assert n_components >= 2, "Must have more than 1 component"
+    size = X1.size
+    model = pm.Model()
+    with model:
+        # cluster sizes
+        p = pm.Dirichlet("p", a=np.ones(n_components), shape=n_components)
+
+        # ensure all clusters have some points
+        p_min_potential = pm.Potential(
+            "p_min_potential", tt.switch(tt.min(p) < 0.1, -np.inf, 0)
+        )
+
+        b0 = pm.Normal("b0", mu=0, sd=10)  # Intercept
+        b1 = pm.Normal("b1", mu=0, sd=100, shape=n_components)
+        sigma = pm.Uniform("sigma", 0, 20)  # Noise
+
+        switches = tt.switch(b1[1] - b1[0] < 0, -np.inf, 0)
+        for icmp in range(1, n_components - 1):
+            switches += tt.switch(b1[icmp + 1] - b1[icmp] < 0, -np.inf, 0)
+
+            order_slopes_potential = pm.Potential(
+                "order_slopes_potential",
+                switches,
+            )
+
+        # latent cluster of each observation
+        category = pm.Categorical("category", p=p, shape=size)
+
+        b1_ = pm.Deterministic("b1_", b1[category])  # Choose b1 based on category
+
+        mu = b0 + b1_ * X1  # Expected value of outcome
+
+        # Likelihood
+        likelihood = pm.Normal("y", mu=mu, sd=sigma, observed=Y)
+
+    # fit model
+    with model:
+        step1 = pm.Metropolis(vars=[p, b0, b1, sigma])
+        # step2 = pm.CategoricalGibbsMetropolis(
+        #     vars=[category], values=list(range(n_components))
+        # )
+        step2 = pm.ElemwiseCategorical(
+            vars=[category], values=list(range(n_components))
+        )
+
+        trace = pm.sample(
+            10000,
+            step=[step1, step2],
+            tune=5000,
+            progressbar=True,
+            return_inferencedata=return_inferencedata,
+            initvals={"b1": np.linspace(-1, 1, n_components)},  #
+        )
+        return trace
 
 
 # import seaborn as sns
@@ -107,7 +164,7 @@ Y1 = b0 + b1[0] * X1_1 + np.random.normal(loc=0, scale=sigma, size=size1)
 
 # Predictor variable
 # X1_2 = np.random.randn(size)
-X1_2 = np.linspace(-2, 2, size2)
+X1_2 = np.linspace(-3, 3, size2)
 # Simulate outcome variable --cluster 2
 Y2 = b0 + b1[1] * X1_2 + np.random.normal(loc=0, scale=sigma, size=size2)
 
@@ -123,10 +180,11 @@ n_components = 2
 # %% Run model
 if n_components == 1:
     trace = c1(X1, Y)
-elif n_components == 2:
-    trace = c2(X1, Y)
+# elif n_components == 2:
+#     trace = c2(X1, Y)
+elif n_components >= 2:
+    trace = cn(X1, Y, n_components)
 
-# %% post simulation calcs
 # print(trace)
 # print(trace.sample_stats)
 # https://python.arviz.org/en/stable/getting_started/WorkingWithInferenceData.html
@@ -158,9 +216,6 @@ fig.savefig("regmix-trace.png")
 
 # %% Plotting: results
 
-# this mean averages "how many times in the trace
-# a point is categorized as either 0 or 1"
-# the mean of the mean should give some center value that can be used to categorize
 
 fig, ax = plt.subplots(1, 1, figsize=(10, 4))
 if n_components == 1:
@@ -169,13 +224,34 @@ if n_components == 1:
     categories = sorted(np.unique(cat))
     category_trace = [0] * len(trace["b0"])
     b1_trace = np.atleast_2d(trace["b1"])
-elif n_components == 2:
-    avg_cat = np.apply_along_axis(np.mean, 0, trace["category"])
-    p_cat = np.abs(avg_cat - 0.5) / 0.5
-    cat = avg_cat - np.mean(avg_cat) > 0
-    cat = cat.astype(int)
+# elif n_components == 2:
+#     # this mean averages "how many times in the trace
+#     # a point is categorized as either 0 or 1"
+#     # the mean of the mean should give some center value that can be used to categorize
+#     avg_cat = np.apply_along_axis(np.mean, 0, trace["category"])
+#     p_cat = np.abs(avg_cat - 0.5) / 0.5
+#     cat = avg_cat - np.mean(avg_cat) > 0
+#     cat = cat.astype(int)
+#     categories = sorted(np.unique(cat))
+#     category_trace = trace["category"]
+#     b1_trace = np.transpose(trace["b1"])
+elif n_components >= 2:
+    p_cat = trace["p"]
+    cat = trace["category"]
     categories = sorted(np.unique(cat))
-    category_trace = trace["category"]
+    # for eaach point count number of times it's classed (nclasses x npoints)
+    a = np.apply_along_axis(np.bincount, 0, cat, minlength=np.max(cat) + 1)
+
+    # most prevalent cluster
+    cat = np.argmax(a, axis=0)
+
+    # Number of samples in most prevalent cluster
+    n_cat = [a[c, i] for i, c in enumerate(cat)]
+
+    # total number of samples
+    n_tot = np.sum(a, axis=0)
+
+    p_cat = n_cat / n_tot
     b1_trace = np.transpose(trace["b1"])
 
 
@@ -213,14 +289,14 @@ ax.set_xlabel("x1")
 fig.savefig("regmix-classes.png")
 
 
-# Proportion in each mixture components
-counts, bins = np.histogram(avg_cat, bins=50)
-fig, ax = plt.subplots(1, 1)
-ax.hist(bins[:-1], bins, weights=counts, align="left")
-ax.set_ylabel("count")
-ax.set_xlabel("p_cat")
-ax.set_xlim((0, 1))
-fig.savefig("regmix-p_cat-posterior.png")
+# # Proportion in each mixture components
+# counts, bins = np.histogram(avg_cat, bins=50)
+# fig, ax = plt.subplots(1, 1)
+# ax.hist(bins[:-1], bins, weights=counts, align="left")
+# ax.set_ylabel("count")
+# ax.set_xlabel("p_cat")
+# ax.set_xlim((0, 1))
+# fig.savefig("regmix-p_cat-posterior.png")
 
 # %% plot posterior
 counts, bins = np.histogram(trace["b0"], bins=50)

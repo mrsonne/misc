@@ -164,8 +164,8 @@ fig.savefig("regmix-trace.png")
 
 fig, ax = plt.subplots(1, 1, figsize=(10, 4))
 if n_components == 1:
-    p_cat = np.ones(size, dtype="int")
-    cat = np.zeros(size)
+    p_cat = np.ones(size, dtype="float")
+    cat = np.zeros(size, dtype="int")
     categories = sorted(np.unique(cat))
     category_trace = [0] * len(trace["b0"])
     b1_trace = np.atleast_2d(trace["b1"])

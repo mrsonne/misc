@@ -124,12 +124,10 @@ def cn(X1, Y, n_components, return_inferencedata: bool = False):
     # fit model
     with model:
         step1 = pm.Metropolis(vars=[p, b0, b1, sigma])
-        # step2 = pm.CategoricalGibbsMetropolis(
+        step2 = pm.CategoricalGibbsMetropolis(vars=[category])
+        # step2 = pm.ElemwiseCategorical(
         #     vars=[category], values=list(range(n_components))
         # )
-        step2 = pm.ElemwiseCategorical(
-            vars=[category], values=list(range(n_components))
-        )
 
         trace = pm.sample(
             10000,
@@ -175,7 +173,7 @@ Y = np.append(Y1, Y2)
 size = X1.size
 
 
-n_components = 2
+n_components = 3
 
 # %% Run model
 if n_components == 1:

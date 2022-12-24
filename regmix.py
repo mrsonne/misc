@@ -168,8 +168,9 @@ if n_components == 1:
     category_trace = [0] * len(trace["b0"])
     b1_trace = np.atleast_2d(trace["b1"])
 elif n_components == 2:
-    p_cat = np.apply_along_axis(np.mean, 0, trace["category"])
-    cat = p_cat - np.mean(p_cat) > 0
+    avg_cat = np.apply_along_axis(np.mean, 0, trace["category"])
+    p_cat = np.abs(avg_cat - 0.5) / 0.5
+    cat = avg_cat - np.mean(avg_cat) > 0
     cat = cat.astype(int)
     categories = sorted(np.unique(cat))
     category_trace = trace["category"]
@@ -180,7 +181,7 @@ x_model = np.linspace(-3, 3)
 for icat in categories:
     y_model = b0_mean + b1_mean[icat] * x_model
     # print(p_cat)
-    ax.scatter(X1[cat == icat], Y[cat == icat], alpha=1)
+    ax.scatter(X1[cat == icat], Y[cat == icat], alpha=p_cat[cat == icat])
     ax.plot(x_model, y_model, "-")
 
 ax.set_ylabel("Y")

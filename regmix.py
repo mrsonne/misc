@@ -9,10 +9,10 @@ import pymc3 as pm
 import theano.tensor as tt
 
 
-def c1(X1, Y):
+def c1(X1, Y, return_inferencedata: bool = False):
     """One-component "mixture" """
     nsample = 5000
-    nchains = 16
+    nchains = 4
     with pm.Model() as model:
         b0 = pm.Normal("b0", 0, sigma=20)
         b1 = pm.Normal("b1", 0, sigma=20)
@@ -20,7 +20,9 @@ def c1(X1, Y):
         sigma = pm.HalfCauchy("sigma", beta=10, testval=1.0)
         likelihood = pm.Normal("y", mu=y_est, sigma=sigma, observed=Y)
 
-        trace = pm.sample(nsample, return_inferencedata=True, chains=nchains)
+        trace = pm.sample(
+            nsample, return_inferencedata=return_inferencedata, chains=nchains
+        )
         return trace
 
 
@@ -28,7 +30,7 @@ def c3(X1, Y):
     ...
 
 
-def c2(X1, Y):
+def c2(X1, Y, return_inferencedata: bool = False):
     """Two component model
     Modified from https://stats.stackexchange.com/questions/185812/regression-mixture-in-pymc3
     """
@@ -74,7 +76,7 @@ def c2(X1, Y):
             20000,
             [step1, step2],
             progressbar=True,
-            return_inferencedata=False,
+            return_inferencedata=return_inferencedata,
             start={"b1": np.linspace(-1, 1, n_components)},  #
         )
 
@@ -93,6 +95,7 @@ b1 = [-5, 5]
 size1 = 25
 size2 = 35
 
+
 # Predictor variable
 # X1_1 = np.random.randn(size)
 X1_1 = np.linspace(-2, 2, size1)
@@ -110,9 +113,16 @@ Y2 = b0 + b1[1] * X1_2 + np.random.normal(loc=0, scale=sigma, size=size2)
 X1 = np.append(X1_1, X1_2)
 Y = np.append(Y1, Y2)
 
+size = X1.size
+
+
+n_components = 2
 
 # %% Run model
-trace = c2(X1, Y)
+if n_components == 1:
+    trace = c1(X1, Y)
+elif n_components == 2:
+    trace = c2(X1, Y)
 
 # %% post simulation calcs
 # print(trace)
@@ -132,6 +142,8 @@ b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
 print(b0_mean)
 print(b1_mean)
 
+b1_mean = np.atleast_1d(b1_mean)
+
 
 # %% Plotting: checks
 
@@ -147,20 +159,28 @@ fig.savefig("regmix-trace.png")
 # this mean averages "how many times in the trace
 # a point is categorized as either 0 or 1"
 # the mean of the mean should give some center value that can be used to categorize
-p_cat = np.apply_along_axis(np.mean, 0, trace["category"])
-cat = p_cat - np.mean(p_cat) < 0
 
-# print(p_cat)
 fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+if n_components == 1:
+    p_cat = np.ones(size, dtype="int")
+    cat = np.zeros(size)
+    category_trace = [0] * len(trace["b0"])
+    b1_trace = np.atleast_2d(trace["b1"])
+elif n_components == 2:
+    p_cat = np.apply_along_axis(np.mean, 0, trace["category"])
+    cat = p_cat - np.mean(p_cat) < 0
+    category_trace = trace["category"]
+    b1_trace = np.transpose(trace["b1"])
+
+    # print(p_cat)
 ax.scatter(X1, Y, c=p_cat, cmap="coolwarm")
 ax.set_ylabel("Y")
 ax.set_xlabel("X1")
 
 x_model = np.linspace(-3, 3)
-y1_model = b0_mean + b1_mean[0] * x_model
-y2_model = b0_mean + b1_mean[1] * x_model
-ax.plot(x_model, y1_model, "b-")
-ax.plot(x_model, y2_model, "r-")
+for b1_mean_val in b1_mean:
+    y_model = b0_mean + b1_mean_val * x_model
+    ax.plot(x_model, y_model, "-")
 fig.savefig("regmix-classes.png")
 
 
@@ -170,7 +190,7 @@ fig.savefig("regmix-classes.png")
 # "Proportion in each mixture"
 counts, bins = np.histogram(p_cat, bins=50)
 fig, ax = plt.subplots(1, 1)
-ax.hist(bins[:-1], bins, weights=counts)
+ax.hist(bins[:-1], bins, weights=counts, align="left")
 ax.set_ylabel("count")
 ax.set_xlabel("p_cat")
 ax.set_xlim((0, 1))
@@ -187,13 +207,13 @@ fig.savefig("regmix-b0-posterior.png")
 
 # %% plot posterior for beta
 fig, ax = plt.subplots(1, 1)
-ax.plot(trace["b1"][:, 0])
-ax.plot(trace["b1"][:, 1])
+for b1_vals in b1_trace:
+    ax.plot(b1_vals)
 fig.savefig("regmix-b1-trace.png")
 
-counts, bins = np.histogram(trace["b1"], bins=50)
-b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
-print(b1_mean)
+counts, bins = np.histogram(b1, bins=50)
+# b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
+# print(b1_mean)
 fig, ax = plt.subplots(1, 1)
 ax.hist(bins[:-1], bins, weights=counts)
 ax.set_ylabel("count")
@@ -202,22 +222,4 @@ fig.savefig("regmix-b1-posterior.png")
 
 
 # %%
-# trace.sel(draw=slice(1000, None))
-print(trace["category"].shape)
-category_trace = trace["category"]
-# get the mean models
-b1_trace = trace["b1"]
-b1_trace = b1_trace[:, 0]
-# beta_1_mean = np.apply_along_axis(np.mean, 0, beta1_trace)
-# print(beta_1_mean)
-print(b1_trace.shape)
-# beta_1_mean  = beta1_trace[category_trace == 0].mean()
-# print(beta_1_mean)
-
-
 print(pm.__version__)
-
-print(trace["b1_"])
-fig, ax = plt.subplots(1, 1)
-ax.plot(trace["b1_"][:, 0])
-ax.plot(trace["b1_"][:, 1])

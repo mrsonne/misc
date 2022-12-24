@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
 
+# from PIL import ImageColor
+import matplotlib.colors as mcolors
 import theano.tensor as tt
 
 
@@ -179,29 +181,40 @@ elif n_components == 2:
 
 x_model = np.linspace(-3, 3)
 for icat in categories:
+
+    # Calculate model mean
     y_model = b0_mean + b1_mean[icat] * x_model
-    # print(p_cat)
+
+    # Plot model mean
     (l,) = ax.plot(x_model, y_model, "-")
+
+    # Get the color
     color = l.get_color()
+    color_rgba = mcolors.to_rgba(color)
+
+    # Expand to the number of data points in the class
+    color_rgba = np.array([list(color_rgba) for p in p_cat[cat == icat]])
+
+    # Set face alpha to the class probability
+    color_rgba[:, 3] = p_cat[cat == icat]
+
+    # Plot data points
     ax.scatter(
         X1[cat == icat],
         Y[cat == icat],
         s=144,
         marker="o",
         edgecolor=color,
-        facecolor=(0, 1, 0, 0.5),
+        facecolor=color_rgba,
     )
 
-ax.set_ylabel("Y")
-ax.set_xlabel("X1")
+ax.set_ylabel("y")
+ax.set_xlabel("x1")
 fig.savefig("regmix-classes.png")
 
 
-# The probability seems not to be localized around 0 and 1
-# It's not bimodal around 0.5 if the R^2 is small it seems
-# In the comments for the original script it says
-# "Proportion in each mixture"
-counts, bins = np.histogram(p_cat, bins=50)
+# Proportion in each mixture components
+counts, bins = np.histogram(avg_cat, bins=50)
 fig, ax = plt.subplots(1, 1)
 ax.hist(bins[:-1], bins, weights=counts, align="left")
 ax.set_ylabel("count")

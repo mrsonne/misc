@@ -106,10 +106,10 @@ def cn(X1, Y, n_components, return_inferencedata: bool = False):
         for icmp in range(1, n_components - 1):
             switches += tt.switch(b1[icmp + 1] - b1[icmp] < 0, -np.inf, 0)
 
-            order_slopes_potential = pm.Potential(
-                "order_slopes_potential",
-                switches,
-            )
+        order_slopes_potential = pm.Potential(
+            "order_slopes_potential",
+            switches,
+        )
 
         # latent cluster of each observation
         category = pm.Categorical("category", p=p, shape=size)

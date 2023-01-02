@@ -1,5 +1,6 @@
 # %% Imports
 
+from typing import Optional
 
 ##Fake data
 import numpy as np
@@ -82,7 +83,14 @@ def c2(X1, Y, return_inferencedata: bool = False):
     return trace
 
 
-def cn(X1, Y, n_components, return_inferencedata: bool = False):
+def cn(
+    X1,
+    Y,
+    n_components,
+    return_inferencedata: bool = False,
+    favor_few_components: bool = True,
+    p_min: Optional[float] = 0.1,
+):
     """Modified from
     https://docs.pymc.io/en/v3/pymc-examples/examples/mixture_models/gaussian_mixture_model.html
     """
@@ -91,17 +99,27 @@ def cn(X1, Y, n_components, return_inferencedata: bool = False):
     model = pm.Model()
     with model:
         # cluster sizes
-        p = pm.Dirichlet("p", a=np.ones(n_components), shape=n_components)
 
-        # ensure all clusters have some points
-        p_min_potential = pm.Potential(
-            "p_min_potential", tt.switch(tt.min(p) < 0.1, -np.inf, 0)
-        )
+        if favor_few_components:
+            # prior that should favor populating few dominant components (Gelman et al p 536)
+            p = pm.Dirichlet(
+                "p", a=np.ones(n_components) / n_components, shape=n_components
+            )
+        else:
+            # fill all components
+            p = pm.Dirichlet("p", a=np.ones(n_components), shape=n_components)
+
+            if p_min is not None:
+                # ensure all clusters have some points
+                p_min_potential = pm.Potential(
+                    "p_min_potential", tt.switch(tt.min(p) < p_min, -np.inf, 0)
+                )
 
         b0 = pm.Normal("b0", mu=0, sd=10)  # Intercept
         b1 = pm.Normal("b1", mu=0, sd=100, shape=n_components)
         sigma = pm.Uniform("sigma", 0, 20)  # Noise
 
+        # Deal with identifiability by enforcing a order in slopes
         switches = tt.switch(b1[1] - b1[0] < 0, -np.inf, 0)
         for icmp in range(1, n_components - 1):
             switches += tt.switch(b1[icmp + 1] - b1[icmp] < 0, -np.inf, 0)
@@ -173,15 +191,21 @@ Y = np.append(Y1, Y2)
 size = X1.size
 
 
-n_components = 3
-
 # %% Run model
+
+n_components = 4
 if n_components == 1:
     trace = c1(X1, Y)
 # elif n_components == 2:
 #     trace = c2(X1, Y)
 elif n_components >= 2:
-    trace = cn(X1, Y, n_components)
+    trace = cn(
+        X1,
+        Y,
+        n_components,
+        favor_few_components=False,
+        p_min=0.1,
+    )
 
 # print(trace)
 # print(trace.sample_stats)
@@ -205,12 +229,12 @@ b1_mean = np.atleast_1d(b1_mean)
 
 # %% Plotting: checks
 
-import arviz as az
+# import arviz as az
 
-# Gives errors
-axs = az.plot_trace(trace)
-fig = axs[0, 0].get_figure()
-fig.savefig("regmix-trace.png")
+# # Gives errors
+# axs = az.plot_trace(trace)
+# fig = axs[0, 0].get_figure()
+# fig.savefig("regmix-trace.png")
 
 # %% Plotting: results
 
@@ -235,10 +259,19 @@ if n_components == 1:
 #     b1_trace = np.transpose(trace["b1"])
 elif n_components >= 2:
     p_cat = trace["p"]
+    print(p_cat.shape)
+    print(p_cat)
+    print(np.mean(p_cat, axis=0))
+    print(np.mean(trace["b1"], axis=0))
+
     cat = trace["category"]
+    print("cat", cat.shape)
     categories = sorted(np.unique(cat))
     # for eaach point count number of times it's classed (nclasses x npoints)
     a = np.apply_along_axis(np.bincount, 0, cat, minlength=np.max(cat) + 1)
+    print(a.shape)
+    print(a)
+    print(np.sum(a, axis=1) / np.sum(a))
 
     # most prevalent cluster
     cat = np.argmax(a, axis=0)
@@ -265,6 +298,10 @@ for icat in categories:
     # Get the color
     color = l.get_color()
     color_rgba = mcolors.to_rgba(color)
+
+    cat_count = np.sum(cat == icat)
+    if cat_count == 0:
+        continue
 
     # Expand to the number of data points in the class
     color_rgba = np.array([list(color_rgba) for p in p_cat[cat == icat]])
@@ -322,4 +359,12 @@ fig.savefig("regmix-b1-posterior.png")
 
 
 # %%
+fig, ax = plt.subplots(1, 1)
+counts, bins = np.histogram(trace["p"][0], bins=50)
+ax.hist(bins[:-1], bins, weights=counts)
+ax.set_ylabel("count")
+ax.set_xlabel("p0")
+# fig.savefig("regmix-b1-posterior.png")
+
+
 print(pm.__version__)

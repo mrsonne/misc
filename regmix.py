@@ -46,25 +46,7 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     cmap = get_cmap(CMAP_NAME)
     colors = itertools.cycle(cmap.colors)
 
-    s1 = axs[0].scatter(
-        x1,
-        y1,
-        s=144,
-        marker="o",
-    )
-
-    s2 = axs[0].scatter(
-        x2,
-        y2,
-        s=144,
-        marker="o",
-    )
-
-    x_model = np.linspace(-3, 3)
-    ypredicted_1 = model(x_model, *popt1)
-    ypredicted_2 = model(x_model, *popt2)
-
-    color = next(colors)
+    color1 = next(colors)
     sns.regplot(
         x=x1,
         y=y1,
@@ -72,7 +54,7 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         order=1,
         line_kws={
             "label": f"CMP1. MLE={popt1}",
-            "color": color,
+            "color": color1,
         },
         scatter_kws={
             "s": 144,
@@ -80,11 +62,11 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         seed=1,
         label="CMP1 data.",
         truncate=False,
-        color=color,
+        color=color1,
         ax=axs[0],
     )
 
-    color = next(colors)
+    color2 = next(colors)
     sns.regplot(
         x=x2,
         y=y2,
@@ -92,7 +74,7 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         order=1,
         line_kws={
             "label": f"CMP2. MLE={popt2}",
-            "color": color,
+            "color": color2,
         },
         scatter_kws={
             "s": 144,
@@ -100,24 +82,8 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         label="CMP2 data.",
         seed=1,
         truncate=False,
-        color=color,
+        color=color2,
         ax=axs[0],
-    )
-
-    axs[0].plot(
-        x_model,
-        ypredicted_1,
-        linestyle="-",
-        color=s1.get_facecolors()[0],
-        # label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
-    )
-
-    axs[0].plot(
-        x_model,
-        ypredicted_2,
-        linestyle="-",
-        color=s2.get_facecolors()[0],
-        # label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
     )
 
     axs[0].set_xlabel("x", fontsize=NORMAL_FONTSIZE)
@@ -125,12 +91,8 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     axs[0].legend(fontsize=20)
 
     print(pcov1)
-    plot_parameters(
-        popt1, pcov1, axs[1], "CMP1", nstds=[2], color=s1.get_facecolors()[0]
-    )
-    plot_parameters(
-        popt2, pcov2, axs[1], "CMP2", nstds=[2], color=s2.get_facecolors()[0]
-    )
+    plot_parameters(popt1, pcov1, axs[1], "CMP1", nstds=[2], color=color1)
+    plot_parameters(popt2, pcov2, axs[1], "CMP2", nstds=[2], color=color2)
     axs[1].legend(fontsize=20)
     axs[1].set_xlabel("b0", fontsize=NORMAL_FONTSIZE)
     axs[1].set_ylabel("b1", fontsize=NORMAL_FONTSIZE)

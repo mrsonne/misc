@@ -224,7 +224,7 @@ size = X1.size
 
 # %% Run model
 
-n_components = 6
+n_components = 2
 trace = fit(
     X1,
     Y,
@@ -233,7 +233,7 @@ trace = fit(
     # p_min=0.1,
     favor_few_components=True,
     # p_min=0.1,
-    nsteps=50000,
+    nsteps=10000,
 )
 
 # print(trace)

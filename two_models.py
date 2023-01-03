@@ -50,7 +50,7 @@ def plot(xpoints, ypoints, ax, marker="x", color="blue", linewidth=0, label=""):
     )
 
 
-def plot_parameters(popt, pcov, ax, name, idx_x=0, idx_y=1):
+def plot_parameters(popt, pcov, ax, name, idx_x=0, idx_y=1, nstds=[1, 2]):
     ax.plot(
         popt[idx_x],
         popt[idx_y],
@@ -59,8 +59,6 @@ def plot_parameters(popt, pcov, ax, name, idx_x=0, idx_y=1):
         zorder=999,
         color="green",
     )
-
-    nstds = [1, 2]
 
     for nstd in nstds:
         ellip = plot_cov_ellipse(

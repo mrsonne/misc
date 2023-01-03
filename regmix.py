@@ -5,6 +5,7 @@ import pickle
 
 ##Fake data
 import numpy as np
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import pymc3 as pm
 import pymc3.distributions.transforms as tr
@@ -16,6 +17,9 @@ import matplotlib.colors as mcolors
 import theano.tensor as tt
 import arviz as az
 
+from two_models import plot_parameters
+
+
 THIS_PATH = Path(__file__).parent
 TMP_PATH = THIS_PATH.joinpath("tmp")
 TMP_PATH.mkdir(parents=True, exist_ok=True)
@@ -23,6 +27,66 @@ RESULTS_PATH = THIS_PATH.joinpath("results")
 RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 
 from two_models import plot_cov_ellipse
+
+
+def model(x, b0, b1):
+    # two-parameter model.
+    return b1 * x + b0
+
+
+def curve_fit_2cmp(x1, y1, x2, y2):
+    fig, axs = plt.subplots(2, 1, figsize=(20, 16))
+    fig.suptitle("MLE parameters inferred from true classes")
+    popt1, pcov1 = curve_fit(model, x1, y1)
+    popt2, pcov2 = curve_fit(model, x2, y2)
+
+    s1 = axs[0].scatter(
+        x1,
+        y1,
+        s=144,
+        marker="o",
+        label=f"{popt1}",
+        # edgecolor="",
+        # facecolor="gray",
+    )
+
+    s2 = axs[0].scatter(
+        x2,
+        y2,
+        s=144,
+        marker="o",
+        label=f"{popt2}",
+        # edgecolor="gray",
+        # facecolor="gray",
+    )
+
+    x_model = np.linspace(-3, 3)
+    ypredicted_1 = model(x_model, *popt1)
+    ypredicted_2 = model(x_model, *popt2)
+
+    axs[0].plot(
+        x_model,
+        ypredicted_1,
+        linestyle="-",
+        color=s1.get_facecolors()[0],
+        # label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
+    )
+
+    axs[0].plot(
+        x_model,
+        ypredicted_2,
+        linestyle="-",
+        color=s2.get_facecolors()[0],
+        # label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
+    )
+
+    axs[0].legend(fontsize=20)
+
+    print(pcov1)
+    plot_parameters(popt1, pcov1, axs[1], "CMP1", nstds=[2])
+    plot_parameters(popt2, pcov2, axs[1], "CMP2", nstds=[2])
+    axs[1].legend(fontsize=20)
+    return fig
 
 
 def c1(X1, Y, return_inferencedata: bool = False):
@@ -245,7 +309,7 @@ def make_data():
     X1 = np.append(X1_1, X1_2)
     Y = np.append(Y1, Y2)
 
-    return X1, Y, b0, b1, sigma
+    return X1, Y, b0, b1, sigma, X1_1, X1_2, Y1, Y2
 
 
 def load_traces(model_ids):
@@ -345,7 +409,7 @@ def plot_true_model(X1, Y, b0, b1, sigma):
 
 # %% Make data
 
-X1, Y, b0, b1, sigma = make_data()
+X1, Y, b0, b1, sigma, X1_1, X1_2, Y1, Y2 = make_data()
 size = X1.size
 
 # %% Run model
@@ -403,6 +467,8 @@ for model_id, data in traces.items():
 
 fig = plot_true_model(X1, Y, b0, b1, sigma)
 fig.savefig(RESULTS_PATH.joinpath("true_model.png"))
+
+fig = curve_fit_2cmp(X1_1, Y1, X1_2, Y2)
 
 
 # %% sklearn

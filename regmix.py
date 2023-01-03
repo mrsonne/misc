@@ -158,6 +158,30 @@ def cn(
         return trace
 
 
+def fit(
+    X1,
+    Y,
+    n_components,
+    return_inferencedata: bool = False,
+    favor_few_components: bool = True,
+    p_min: Optional[float] = 0.1,
+):
+    if n_components == 1:
+        trace = c1(X1, Y, return_inferencedata=return_inferencedata)
+    # elif n_components == 2:
+    #     trace = c2(X1, Y)
+    elif n_components >= 2:
+        trace = cn(
+            X1,
+            Y,
+            n_components,
+            favor_few_components=favor_few_components,
+            return_inferencedata=return_inferencedata,
+            p_min=p_min,
+        )
+    return trace
+
+
 # import seaborn as sns
 
 # %% Data
@@ -193,19 +217,14 @@ size = X1.size
 
 # %% Run model
 
-n_components = 4
-if n_components == 1:
-    trace = c1(X1, Y)
-# elif n_components == 2:
-#     trace = c2(X1, Y)
-elif n_components >= 2:
-    trace = cn(
-        X1,
-        Y,
-        n_components,
-        favor_few_components=False,
-        p_min=0.1,
-    )
+n_components = 2
+trace = fit(
+    X1,
+    Y,
+    n_components,
+    favor_few_components=False,
+    p_min=0.1,
+)
 
 # print(trace)
 # print(trace.sample_stats)

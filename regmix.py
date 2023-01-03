@@ -252,6 +252,18 @@ def load_traces(model_ids):
     return traces
 
 
+def plot_traces(model_ids):
+
+    traces = load_traces(model_ids)
+    # extra = ["p", "category"]
+    # , var_names=["b0", "b1", "sigma"]
+    for key, trace in traces.items():
+        axs = az.plot_trace(trace)
+        fig = axs[0, 0].get_figure()
+        fig.tight_layout()
+        fig.savefig(TMP_PATH.joinpath(f"trace_{key}.png"))
+
+
 def compare(model_ids, ics=["loo", "waic"]):
     """
     Load arviz traces from disk and compare
@@ -279,7 +291,7 @@ size = X1.size
 
 # %% Run model
 
-n_components = 2
+n_components = 4
 trace, model = fit(
     X1,
     Y,
@@ -296,7 +308,7 @@ trace, model = fit(
 # pm.model_to_graphviz(model)
 
 # %% compare
-model_ids = [1, 2, 3, 4, 5, 6, 7]
+model_ids = [1, 2, 3, 4]
 compare(model_ids)
 
 # %% Plot traces & posteriors
@@ -312,12 +324,8 @@ compare(model_ids)
 # idata.sel(draw=slice(100, None))
 
 
-key = "ncmp=2"
-traces = load_traces([3])
-axs = az.plot_trace(traces[key], var_names=["b0", "b1", "sigma", "p", "category"])
-fig = axs[0, 0].get_figure()
-fig.tight_layout()
-fig.savefig(TMP_PATH.joinpath(f"trace_{key}.png"))
+plot_traces(model_ids)
+
 # print(az.summary(traces["ncmp=3"], var_names=("b0, b1")))
 
 # print(trace["b0"].shape)

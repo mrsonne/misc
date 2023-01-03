@@ -241,11 +241,7 @@ def make_data():
     return X1, Y, b0, b1, sigma
 
 
-def compare(model_ids, ics=["loo", "waic"]):
-    """
-    Load arviz traces from disk and compare
-    """
-
+def load_traces(model_ids):
     # Load traces
     traces = {}
     for _id in model_ids:
@@ -253,6 +249,15 @@ def compare(model_ids, ics=["loo", "waic"]):
         print(f"Loading {filepath}")
         with open(filepath, "rb") as f:
             traces[f"ncmp={_id}"] = pickle.load(f)
+    return traces
+
+
+def compare(model_ids, ics=["loo", "waic"]):
+    """
+    Load arviz traces from disk and compare
+    """
+
+    traces = load_traces(model_ids)
 
     # Analyze for each specified ic
     for ic in ics:
@@ -274,7 +279,7 @@ size = X1.size
 
 # %% Run model
 
-n_components = 3
+n_components = 2
 trace, model = fit(
     X1,
     Y,
@@ -284,7 +289,7 @@ trace, model = fit(
     # favor_few_components=True,
     # p_min=0.1,
     nsteps=20000,
-    return_inferencedata=False,
+    return_inferencedata=True,
     save_trace=True,
 )
 
@@ -294,7 +299,7 @@ trace, model = fit(
 model_ids = [1, 2, 3, 4, 5, 6, 7]
 compare(model_ids)
 
-# %% More stuff
+# %% Plot traces & posteriors
 # print(trace)
 # print(trace.sample_stats)
 # https://python.arviz.org/en/stable/getting_started/WorkingWithInferenceData.html
@@ -306,13 +311,22 @@ compare(model_ids)
 # stacked = az.extract(trace)
 # idata.sel(draw=slice(100, None))
 
-print(trace["b0"].shape)
-b0_mean = np.apply_along_axis(np.mean, 0, trace["b0"])
-b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
-print(b0_mean)
-print(b1_mean)
 
-b1_mean = np.atleast_1d(b1_mean)
+key = "ncmp=2"
+traces = load_traces([3])
+axs = az.plot_trace(traces[key], var_names=["b0", "b1", "sigma", "p", "category"])
+fig = axs[0, 0].get_figure()
+fig.tight_layout()
+fig.savefig(TMP_PATH.joinpath(f"trace_{key}.png"))
+# print(az.summary(traces["ncmp=3"], var_names=("b0, b1")))
+
+# print(trace["b0"].shape)
+# b0_mean = np.apply_along_axis(np.mean, 0, trace["b0"])
+# b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
+# print(b0_mean)[0]
+# print(b1_mean)
+
+# b1_mean = np.atleast_1d(b1_mean)
 
 
 # %% Plotting: checks
@@ -493,39 +507,5 @@ fig.savefig("regmix-classes.png")
 # ax.set_xlabel("p_cat")
 # ax.set_xlim((0, 1))
 # fig.savefig("regmix-p_cat-posterior.png")
-
-# %% plot posterior
-counts, bins = np.histogram(trace["b0"], bins=50)
-fig, ax = plt.subplots(1, 1)
-ax.hist(bins[:-1], bins, weights=counts)
-ax.set_ylabel("count")
-ax.set_xlabel("b0")
-fig.savefig("regmix-b0-posterior.png")
-
-
-# %% plot posterior for beta
-fig, ax = plt.subplots(1, 1)
-for b1_vals in b1_trace:
-    ax.plot(b1_vals)
-fig.savefig("regmix-b1-trace.png")
-
-counts, bins = np.histogram(b1, bins=50)
-# b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
-# print(b1_mean)
-fig, ax = plt.subplots(1, 1)
-ax.hist(bins[:-1], bins, weights=counts)
-ax.set_ylabel("count")
-ax.set_xlabel("b1")
-fig.savefig("regmix-b1-posterior.png")
-
-
-# %%
-fig, ax = plt.subplots(1, 1)
-counts, bins = np.histogram(trace["p"][0], bins=50)
-ax.hist(bins[:-1], bins, weights=counts)
-ax.set_ylabel("count")
-ax.set_xlabel("p0")
-# fig.savefig("regmix-b1-posterior.png")
-
 
 print(pm.__version__)

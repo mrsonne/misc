@@ -1,17 +1,22 @@
 # %% Imports
 
 from typing import Optional
+import pickle
 
 ##Fake data
 import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
-
+from pathlib import Path
 
 # from PIL import ImageColor
 import matplotlib.colors as mcolors
 import theano.tensor as tt
+
+THIS_PATH = Path(__file__).parent
+TMP_PATH = THIS_PATH.joinpath("tmp")
+TMP_PATH.mkdir(parents=True, exist_ok=True)
 
 from two_models import plot_cov_ellipse
 
@@ -192,39 +197,42 @@ def fit(
 # import seaborn as sns
 
 # %% Data
+def make_data():
+    np.random.seed(123)
+    b0 = 0
+    sigma = 2
+    b1 = [-5, 5]
+    # size = 250
+    size1 = 25
+    size2 = 35
 
-np.random.seed(123)
-b0 = 0
-sigma = 2
-b1 = [-5, 5]
-# size = 250
-size1 = 25
-size2 = 35
+    # Predictor variable
+    # X1_1 = np.random.randn(size)
+    X1_1 = np.linspace(-2, 2, size1)
+
+    # Simulate outcome variable--cluster 1
+    Y1 = b0 + b1[0] * X1_1 + np.random.normal(loc=0, scale=sigma, size=size1)
+
+    # Predictor variable
+    # X1_2 = np.random.randn(size)
+    X1_2 = np.linspace(-3, 3, size2)
+    # Simulate outcome variable --cluster 2
+    Y2 = b0 + b1[1] * X1_2 + np.random.normal(loc=0, scale=sigma, size=size2)
+
+    X1 = np.append(X1_1, X1_2)
+    Y = np.append(Y1, Y2)
+
+    return X1, Y
 
 
-# Predictor variable
-# X1_1 = np.random.randn(size)
-X1_1 = np.linspace(-2, 2, size1)
+# %% Make data
 
-# Simulate outcome variable--cluster 1
-Y1 = b0 + b1[0] * X1_1 + np.random.normal(loc=0, scale=sigma, size=size1)
-
-# Predictor variable
-# X1_2 = np.random.randn(size)
-X1_2 = np.linspace(-3, 3, size2)
-# Simulate outcome variable --cluster 2
-Y2 = b0 + b1[1] * X1_2 + np.random.normal(loc=0, scale=sigma, size=size2)
-
-
-X1 = np.append(X1_1, X1_2)
-Y = np.append(Y1, Y2)
-
+X1, Y = make_data()
 size = X1.size
-
 
 # %% Run model
 
-n_components = 3
+n_components = 5
 trace = fit(
     X1,
     Y,
@@ -234,7 +242,12 @@ trace = fit(
     # favor_few_components=True,
     # p_min=0.1,
     nsteps=10000,
+    return_inferencedata=True,
 )
+
+with open(TMP_PATH.joinpath(f"az_trace_n{n_components}.pkl"), "wb") as f:
+    pickle.dump(trace, f)
+
 
 # print(trace)
 # print(trace.sample_stats)

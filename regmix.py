@@ -289,7 +289,31 @@ labels = clsfier.fit_predict(XY)
 # %% Plotting: results
 
 
-fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+fig, axs = plt.subplots(3, 1, figsize=(20, 30), sharex=True)
+x_model = np.linspace(-3, 3)
+ax = axs[0]
+ax.set_title("Data")
+ax.scatter(
+    X1,
+    Y,
+    s=144,
+    marker="o",
+    edgecolor="gray",
+    facecolor="gray",
+)
+for icmp, b1_ in enumerate(b1):
+    y_model = b0 + b1_ * x_model
+    ax.plot(
+        x_model,
+        y_model,
+        linestyle="-",
+        color="gray",
+        label=f"Cmp {icmp}: {b0}{b1_}x",
+    )
+ax.legend(fontsize=20)
+
+ax = axs[2]
+ax.set_title("Linear Mixture Model")
 if n_components == 1:
     p_cat = np.ones(size, dtype="float")
     cat = np.zeros(size, dtype="int")
@@ -335,14 +359,18 @@ elif n_components >= 2:
     p_cat = n_cat / n_tot
     b1_trace = np.transpose(trace["b1"])
 
-x_model = np.linspace(-3, 3)
 for icat in categories:
 
     # Calculate model mean
     y_model = b0_mean + b1_mean[icat] * x_model
 
     # Plot model mean
-    (l,) = ax.plot(x_model, y_model, "-")
+    (l,) = ax.plot(
+        x_model,
+        y_model,
+        "-",
+        label=f"Cmp {icat}: {b0_mean:7.2e}{b1_mean[icat]:7.2e} * x",
+    )
 
     # Get the color
     color = l.get_color()
@@ -367,13 +395,23 @@ for icat in categories:
         edgecolor=color,
         facecolor=color_rgba,
     )
+ax.legend(fontsize=20)
 
+ax = axs[1]
 colors = ["blue", "red", "magenta", "cyan", "green", "orange"]
 means = clsfier.means_
 covs = clsfier.covariances_
 label_ids = set(labels)
-print(label_ids)
-print(clsfier.weights_)
+
+ax.set_title("GMM")
+ax.scatter(
+    X1,
+    Y,
+    s=144,
+    marker="o",
+    edgecolor="gray",
+    facecolor="gray",
+)
 
 for mean, cov, color, label in zip(means, covs, colors, label_ids):
     plot_cov_ellipse(cov, mean, nstd=2, ax=ax, color=color, zorder=-1000, alpha=0.3)

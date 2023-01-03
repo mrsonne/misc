@@ -94,6 +94,7 @@ def cn(
     return_inferencedata: bool = False,
     favor_few_components: bool = True,
     p_min: Optional[float] = 0.1,
+    nsteps: int = 10000,
 ):
     """Modified from
     https://docs.pymc.io/en/v3/pymc-examples/examples/mixture_models/gaussian_mixture_model.html
@@ -152,9 +153,9 @@ def cn(
         # )
 
         trace = pm.sample(
-            10000,
+            nsteps,
             step=[step1, step2],
-            tune=5000,
+            tune=int(0.2 * (nsteps)),
             progressbar=True,
             return_inferencedata=return_inferencedata,
             initvals={"b1": np.linspace(-1, 1, n_components)},  #
@@ -169,6 +170,7 @@ def fit(
     return_inferencedata: bool = False,
     favor_few_components: bool = True,
     p_min: Optional[float] = 0.1,
+    nsteps: int = 10000,
 ):
     if n_components == 1:
         trace = c1(X1, Y, return_inferencedata=return_inferencedata)
@@ -182,6 +184,7 @@ def fit(
             favor_few_components=favor_few_components,
             return_inferencedata=return_inferencedata,
             p_min=p_min,
+            nsteps=nsteps,
         )
     return trace
 
@@ -221,13 +224,16 @@ size = X1.size
 
 # %% Run model
 
-n_components = 2
+n_components = 6
 trace = fit(
     X1,
     Y,
     n_components,
-    favor_few_components=False,
-    p_min=0.1,
+    # favor_few_components=False,
+    # p_min=0.1,
+    favor_few_components=True,
+    # p_min=0.1,
+    nsteps=50000,
 )
 
 # print(trace)

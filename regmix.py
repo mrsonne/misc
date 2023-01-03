@@ -224,14 +224,14 @@ size = X1.size
 
 # %% Run model
 
-n_components = 2
+n_components = 3
 trace = fit(
     X1,
     Y,
     n_components,
-    # favor_few_components=False,
-    # p_min=0.1,
-    favor_few_components=True,
+    favor_few_components=False,
+    p_min=0.1,
+    # favor_few_components=True,
     # p_min=0.1,
     nsteps=10000,
 )
@@ -273,12 +273,12 @@ b1_mean = np.atleast_1d(b1_mean)
 #     random_state=0,
 # )
 
-n_components = 6
+n_components_gmm = 6
 clsfier = BayesianGaussianMixture(
     n_components=n_components,
     random_state=42,
     weight_concentration_prior_type="dirichlet_distribution",
-    weight_concentration_prior=1.0 / n_components,
+    weight_concentration_prior=1.0 / n_components_gmm,
 )
 
 
@@ -287,6 +287,11 @@ XY = np.stack((X1, Y), axis=1)
 labels = clsfier.fit_predict(XY)
 
 # %% Plotting: results
+def sign(x):
+    if x > 0:
+        return "+"
+    else:
+        return "-"
 
 
 fig, axs = plt.subplots(3, 1, figsize=(20, 30), sharex=True)
@@ -308,12 +313,12 @@ for icmp, b1_ in enumerate(b1):
         y_model,
         linestyle="-",
         color="gray",
-        label=f"Cmp {icmp}: {b0}{b1_}x",
+        label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
     )
 ax.legend(fontsize=20)
 
 ax = axs[2]
-ax.set_title("Linear Mixture Model")
+ax.set_title(f"Linear Mixture Model with {n_components} components (pymc3)")
 if n_components == 1:
     p_cat = np.ones(size, dtype="float")
     cat = np.zeros(size, dtype="int")
@@ -369,7 +374,7 @@ for icat in categories:
         x_model,
         y_model,
         "-",
-        label=f"Cmp {icat}: {b0_mean:7.2e}{b1_mean[icat]:7.2e} * x",
+        label=f"Cmp {icat}: {b0_mean:7.2e} {sign(b1_mean[icat])} {np.abs(b1_mean[icat]):7.2e} * x )",
     )
 
     # Get the color
@@ -395,7 +400,7 @@ for icat in categories:
         edgecolor=color,
         facecolor=color_rgba,
     )
-ax.legend(fontsize=20)
+ax.legend(fontsize=20, title="Mean parameters")
 
 ax = axs[1]
 colors = ["blue", "red", "magenta", "cyan", "green", "orange"]
@@ -403,7 +408,7 @@ means = clsfier.means_
 covs = clsfier.covariances_
 label_ids = set(labels)
 
-ax.set_title("GMM")
+ax.set_title(f"BayesianGaussianMixture with {n_components_gmm} initial components")
 ax.scatter(
     X1,
     Y,

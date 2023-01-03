@@ -13,6 +13,7 @@ from pathlib import Path
 # from PIL import ImageColor
 import matplotlib.colors as mcolors
 import theano.tensor as tt
+import arviz as az
 
 THIS_PATH = Path(__file__).parent
 TMP_PATH = THIS_PATH.joinpath("tmp")
@@ -249,6 +250,30 @@ with open(TMP_PATH.joinpath(f"az_trace_n{n_components}.pkl"), "wb") as f:
     pickle.dump(trace, f)
 
 
+# %% compare
+
+model_ids = [1, 2, 3, 4, 5]
+traces = {}
+for _id in model_ids:
+    filepath = TMP_PATH.joinpath(f"az_trace_n{_id}.pkl")
+    print(f"Loading {filepath}")
+    with open(filepath, "rb") as f:
+        traces[f"ncmp={_id}"] = pickle.load(f)
+
+ics = "loo", "waic"
+for ic in ics:
+    print(ic)
+    df_compare = az.compare(traces, ic=ic)
+    print(df_compare)
+
+    ax = az.plot_compare(df_compare, insample_dev=False)
+    fig = ax.get_figure()
+    fig.savefig(TMP_PATH.joinpath(f"compare_{ic}.png"))
+    with open(TMP_PATH.joinpath(f"compare_{ic}.html"), "w") as f:
+        f.write(df_compare.to_html())
+
+
+# %% More stuff
 # print(trace)
 # print(trace.sample_stats)
 # https://python.arviz.org/en/stable/getting_started/WorkingWithInferenceData.html
@@ -271,7 +296,6 @@ b1_mean = np.atleast_1d(b1_mean)
 
 # %% Plotting: checks
 
-# import arviz as az
 
 # # Gives errors
 # axs = az.plot_trace(trace)

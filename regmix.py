@@ -233,7 +233,7 @@ size = X1.size
 
 # %% Run model
 
-n_components = 5
+n_components = 7
 trace = fit(
     X1,
     Y,
@@ -252,7 +252,7 @@ with open(TMP_PATH.joinpath(f"az_trace_n{n_components}.pkl"), "wb") as f:
 
 # %% compare
 
-model_ids = [1, 2, 3, 4, 5]
+model_ids = [1, 2, 3, 4, 5, 6, 7]
 traces = {}
 for _id in model_ids:
     filepath = TMP_PATH.joinpath(f"az_trace_n{_id}.pkl")

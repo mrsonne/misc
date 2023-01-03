@@ -7,6 +7,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
+import pymc3.distributions.transforms as tr
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from pathlib import Path
 
@@ -26,7 +27,8 @@ def c1(X1, Y, return_inferencedata: bool = False):
     """One-component "mixture" """
     nsample = 5000
     nchains = 4
-    with pm.Model() as model:
+    model = pm.Model()
+    with model:
         b0 = pm.Normal("b0", 0, sigma=20)
         b1 = pm.Normal("b1", 0, sigma=20)
         y_est = b0 + b1 * X1
@@ -36,7 +38,7 @@ def c1(X1, Y, return_inferencedata: bool = False):
         trace = pm.sample(
             nsample, return_inferencedata=return_inferencedata, chains=nchains
         )
-        return trace
+        return trace, model
 
 
 def c2(X1, Y, return_inferencedata: bool = False):
@@ -127,18 +129,25 @@ def cn(
                 )
 
         b0 = pm.Normal("b0", mu=0, sd=10)  # Intercept
-        b1 = pm.Normal("b1", mu=0, sd=100, shape=n_components)
+        b1 = pm.Normal(
+            "b1",
+            mu=0,
+            sd=100,
+            shape=n_components,
+            transform=tr.ordered,
+            testval=np.linspace(-1, 1, n_components),
+        )
         sigma = pm.Uniform("sigma", 0, 20)  # Noise
 
         # Deal with identifiability by enforcing a order in slopes
-        switches = tt.switch(b1[1] - b1[0] < 0, -np.inf, 0)
-        for icmp in range(1, n_components - 1):
-            switches += tt.switch(b1[icmp + 1] - b1[icmp] < 0, -np.inf, 0)
+        # switches = tt.switch(b1[1] - b1[0] < 0, -np.inf, 0)
+        # for icmp in range(1, n_components - 1):
+        #     switches += tt.switch(b1[icmp + 1] - b1[icmp] < 0, -np.inf, 0)
 
-        order_slopes_potential = pm.Potential(
-            "order_slopes_potential",
-            switches,
-        )
+        # order_slopes_potential = pm.Potential(
+        #     "order_slopes_potential",
+        #     switches,
+        # )
 
         # latent cluster of each observation
         category = pm.Categorical("category", p=p, shape=size)
@@ -164,9 +173,9 @@ def cn(
             tune=int(0.2 * (nsteps)),
             progressbar=True,
             return_inferencedata=return_inferencedata,
-            initvals={"b1": np.linspace(-1, 1, n_components)},  #
+            # initvals={"b1": np.linspace(-1, 1, n_components)},  #
         )
-        return trace
+        return trace, model
 
 
 def fit(
@@ -177,14 +186,14 @@ def fit(
     favor_few_components: bool = True,
     p_min: Optional[float] = 0.1,
     nsteps: int = 10000,
-    save_trace: bool = False
+    save_trace: bool = False,
 ):
     if n_components == 1:
-        trace = c1(X1, Y, return_inferencedata=return_inferencedata)
+        trace, model = c1(X1, Y, return_inferencedata=return_inferencedata)
     # elif n_components == 2:
     #     trace = c2(X1, Y)
     elif n_components >= 2:
-        trace = cn(
+        trace, model = cn(
             X1,
             Y,
             n_components,
@@ -198,7 +207,7 @@ def fit(
         with open(TMP_PATH.joinpath(f"az_trace_n{n_components}.pkl"), "wb") as f:
             pickle.dump(trace, f)
 
-    return trace
+    return trace, model
 
 
 # import seaborn as sns
@@ -229,7 +238,7 @@ def make_data():
     X1 = np.append(X1_1, X1_2)
     Y = np.append(Y1, Y2)
 
-    return X1, Y
+    return X1, Y, b0, b1, sigma
 
 
 def compare(model_ids, ics=["loo", "waic"]):
@@ -260,13 +269,13 @@ def compare(model_ids, ics=["loo", "waic"]):
 
 # %% Make data
 
-X1, Y = make_data()
+X1, Y, b0, b1, sigma = make_data()
 size = X1.size
 
 # %% Run model
 
 n_components = 3
-trace = fit(
+trace, model = fit(
     X1,
     Y,
     n_components,
@@ -274,11 +283,12 @@ trace = fit(
     p_min=0.1,
     # favor_few_components=True,
     # p_min=0.1,
-    nsteps=10000,
-    return_inferencedata=True,
-    save_trace=True
+    nsteps=20000,
+    return_inferencedata=False,
+    save_trace=True,
 )
 
+# pm.model_to_graphviz(model)
 
 # %% compare
 model_ids = [1, 2, 3, 4, 5, 6, 7]

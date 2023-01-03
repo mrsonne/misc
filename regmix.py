@@ -6,11 +6,14 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
-from sklearn.mixture import GaussianMixture
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+
 
 # from PIL import ImageColor
 import matplotlib.colors as mcolors
 import theano.tensor as tt
+
+from two_models import plot_cov_ellipse
 
 
 def c1(X1, Y, return_inferencedata: bool = False):
@@ -215,19 +218,6 @@ Y = np.append(Y1, Y2)
 
 size = X1.size
 
-# %% sklearn
-
-n_components = 2
-clsfier = GaussianMixture(
-    n_components=n_components,
-    random_state=0,
-    covariance_type="full",
-)
-
-#  (n_samples, n_features)
-XY = np.stack((X1, Y), axis=1)
-labels = clsfier.fit_predict(XY)
-
 
 # %% Run model
 
@@ -268,6 +258,27 @@ b1_mean = np.atleast_1d(b1_mean)
 # axs = az.plot_trace(trace)
 # fig = axs[0, 0].get_figure()
 # fig.savefig("regmix-trace.png")
+
+# %% sklearn
+
+# n_components = 3
+# clsfier = GaussianMixture(
+#     n_components=n_components,
+#     random_state=0,
+# )
+
+n_components = 6
+clsfier = BayesianGaussianMixture(
+    n_components=n_components,
+    random_state=42,
+    weight_concentration_prior_type="dirichlet_distribution",
+    weight_concentration_prior=1.0 / n_components,
+)
+
+
+#  (n_samples, n_features)
+XY = np.stack((X1, Y), axis=1)
+labels = clsfier.fit_predict(XY)
 
 # %% Plotting: results
 
@@ -318,7 +329,6 @@ elif n_components >= 2:
     p_cat = n_cat / n_tot
     b1_trace = np.transpose(trace["b1"])
 
-
 x_model = np.linspace(-3, 3)
 for icat in categories:
 
@@ -351,6 +361,17 @@ for icat in categories:
         edgecolor=color,
         facecolor=color_rgba,
     )
+
+colors = ["blue", "red", "magenta", "cyan", "green", "orange"]
+means = clsfier.means_
+covs = clsfier.covariances_
+label_ids = set(labels)
+print(label_ids)
+print(clsfier.weights_)
+
+for mean, cov, color, label in zip(means, covs, colors, label_ids):
+    plot_cov_ellipse(cov, mean, nstd=2, ax=ax, color=color, zorder=-1000, alpha=0.3)
+
 
 ax.set_ylabel("y")
 ax.set_xlabel("x1")

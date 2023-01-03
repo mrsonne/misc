@@ -271,6 +271,26 @@ def plot_traces(model_ids):
         fig.savefig(TMP_PATH.joinpath(f"trace_{key}.png"))
 
 
+def plot_posterior(model_ids):
+    point_estimate = "mean"
+    traces = load_traces(model_ids)
+    for key, trace in traces.items():
+        try:
+            axs = az.plot_posterior(
+                trace,
+                var_names=["b0", "b1", "p", "sigma"],
+                point_estimate=point_estimate,
+            )
+        except KeyError:
+            axs = az.plot_posterior(
+                trace, var_names=["b0", "b1"], point_estimate=point_estimate
+            )
+
+        fig = axs[0, 0].get_figure()
+        fig.tight_layout()
+        fig.savefig(TMP_PATH.joinpath(f"posterior_{key}.png"))
+
+
 def sign(x):
     if x > 0:
         return "+"
@@ -365,7 +385,8 @@ compare(model_ids)
 from pretty_html_table import build_table
 
 model_ids = [2]
-plot_traces(model_ids)
+# plot_traces(model_ids)
+plot_posterior(model_ids)
 
 traces = load_traces(model_ids)
 for model_id, data in traces.items():

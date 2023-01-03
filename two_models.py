@@ -50,14 +50,16 @@ def plot(xpoints, ypoints, ax, marker="x", color="blue", linewidth=0, label=""):
     )
 
 
-def plot_parameters(popt, pcov, ax, name, idx_x=0, idx_y=1, nstds=[1, 2]):
+def plot_parameters(
+    popt, pcov, ax, name, idx_x=0, idx_y=1, nstds=[1, 2], color="green"
+):
     ax.plot(
         popt[idx_x],
         popt[idx_y],
         "o",
         label=f"MLE {name}: {np.array2string(popt, precision=2)}",
         zorder=999,
-        color="green",
+        color=color,
     )
 
     for nstd in nstds:
@@ -67,9 +69,10 @@ def plot_parameters(popt, pcov, ax, name, idx_x=0, idx_y=1, nstds=[1, 2]):
             ax=ax,
             nstd=nstd,
             label=f"MLE COV @ {nstd}x std",
-            fill=None,
-            edgecolor="green",
-            linewidth=1,
+            facecolor=color,
+            alpha=0.25,
+            edgecolor=color,
+            linewidth=3,
             zorder=999,
         )
-        ellip.set(alpha=0.5)
+        # ellip.set(alpha=0.5)

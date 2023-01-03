@@ -2,6 +2,7 @@
 
 from typing import Optional
 import pickle
+import itertools
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -14,6 +15,7 @@ from pathlib import Path
 
 # from PIL import ImageColor
 import matplotlib.colors as mcolors
+from matplotlib.cm import get_cmap
 import theano.tensor as tt
 import arviz as az
 
@@ -26,7 +28,7 @@ TMP_PATH.mkdir(parents=True, exist_ok=True)
 RESULTS_PATH = THIS_PATH.joinpath("results")
 RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 NORMAL_FONTSIZE = 20
-
+CMAP_NAME = "tab10"
 from two_models import plot_cov_ellipse
 
 
@@ -41,12 +43,14 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     popt1, pcov1 = curve_fit(model, x1, y1)
     popt2, pcov2 = curve_fit(model, x2, y2)
 
+    cmap = get_cmap(CMAP_NAME)
+    colors = itertools.cycle(cmap.colors)
+
     s1 = axs[0].scatter(
         x1,
         y1,
         s=144,
         marker="o",
-        label=f"MLE CMP1: {popt1}",
     )
 
     s2 = axs[0].scatter(
@@ -54,13 +58,13 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         y2,
         s=144,
         marker="o",
-        label=f"MLE CMP2: {popt2}",
     )
 
     x_model = np.linspace(-3, 3)
     ypredicted_1 = model(x_model, *popt1)
     ypredicted_2 = model(x_model, *popt2)
 
+    color = next(colors)
     sns.regplot(
         x=x1,
         y=y1,
@@ -68,14 +72,19 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         order=1,
         line_kws={
             "label": f"CMP1. MLE={popt1}",
-            "color": s1.get_facecolors()[0],
+            "color": color,
+        },
+        scatter_kws={
+            "s": 144,
         },
         seed=1,
+        label="CMP1 data.",
         truncate=False,
-        color=s1.get_facecolors()[0],
+        color=color,
         ax=axs[0],
     )
 
+    color = next(colors)
     sns.regplot(
         x=x2,
         y=y2,
@@ -83,11 +92,15 @@ def curve_fit_2cmp(x1, y1, x2, y2):
         order=1,
         line_kws={
             "label": f"CMP2. MLE={popt2}",
-            "color": s2.get_facecolors()[0],
+            "color": color,
         },
+        scatter_kws={
+            "s": 144,
+        },
+        label="CMP2 data.",
         seed=1,
         truncate=False,
-        color=s2.get_facecolors()[0],
+        color=color,
         ax=axs[0],
     )
 

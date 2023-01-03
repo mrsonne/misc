@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
+from sklearn.mixture import GaussianMixture
 
 # from PIL import ImageColor
 import matplotlib.colors as mcolors
@@ -213,6 +214,19 @@ X1 = np.append(X1_1, X1_2)
 Y = np.append(Y1, Y2)
 
 size = X1.size
+
+# %% sklearn
+
+n_components = 2
+clsfier = GaussianMixture(
+    n_components=n_components,
+    random_state=0,
+    covariance_type="full",
+)
+
+#  (n_samples, n_features)
+XY = np.stack((X1, Y), axis=1)
+labels = clsfier.fit_predict(XY)
 
 
 # %% Run model

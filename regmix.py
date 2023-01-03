@@ -172,11 +172,12 @@ def cn(
 def fit(
     X1,
     Y,
-    n_components,
+    n_components: int,
     return_inferencedata: bool = False,
     favor_few_components: bool = True,
     p_min: Optional[float] = 0.1,
     nsteps: int = 10000,
+    save_trace: bool = False
 ):
     if n_components == 1:
         trace = c1(X1, Y, return_inferencedata=return_inferencedata)
@@ -192,6 +193,11 @@ def fit(
             p_min=p_min,
             nsteps=nsteps,
         )
+
+    if save_trace:
+        with open(TMP_PATH.joinpath(f"az_trace_n{n_components}.pkl"), "wb") as f:
+            pickle.dump(trace, f)
+
     return trace
 
 
@@ -226,6 +232,32 @@ def make_data():
     return X1, Y
 
 
+def compare(model_ids, ics=["loo", "waic"]):
+    """
+    Load arviz traces from disk and compare
+    """
+
+    # Load traces
+    traces = {}
+    for _id in model_ids:
+        filepath = TMP_PATH.joinpath(f"az_trace_n{_id}.pkl")
+        print(f"Loading {filepath}")
+        with open(filepath, "rb") as f:
+            traces[f"ncmp={_id}"] = pickle.load(f)
+
+    # Analyze for each specified ic
+    for ic in ics:
+        print(ic)
+        df_compare = az.compare(traces, ic=ic)
+        print(df_compare)
+
+        ax = az.plot_compare(df_compare, insample_dev=False)
+        fig = ax.get_figure()
+        fig.savefig(TMP_PATH.joinpath(f"compare_{ic}.png"))
+        with open(TMP_PATH.joinpath(f"compare_{ic}.html"), "w") as f:
+            f.write(df_compare.to_html())
+
+
 # %% Make data
 
 X1, Y = make_data()
@@ -233,7 +265,7 @@ size = X1.size
 
 # %% Run model
 
-n_components = 7
+n_components = 3
 trace = fit(
     X1,
     Y,
@@ -244,34 +276,13 @@ trace = fit(
     # p_min=0.1,
     nsteps=10000,
     return_inferencedata=True,
+    save_trace=True
 )
-
-with open(TMP_PATH.joinpath(f"az_trace_n{n_components}.pkl"), "wb") as f:
-    pickle.dump(trace, f)
 
 
 # %% compare
-
 model_ids = [1, 2, 3, 4, 5, 6, 7]
-traces = {}
-for _id in model_ids:
-    filepath = TMP_PATH.joinpath(f"az_trace_n{_id}.pkl")
-    print(f"Loading {filepath}")
-    with open(filepath, "rb") as f:
-        traces[f"ncmp={_id}"] = pickle.load(f)
-
-ics = "loo", "waic"
-for ic in ics:
-    print(ic)
-    df_compare = az.compare(traces, ic=ic)
-    print(df_compare)
-
-    ax = az.plot_compare(df_compare, insample_dev=False)
-    fig = ax.get_figure()
-    fig.savefig(TMP_PATH.joinpath(f"compare_{ic}.png"))
-    with open(TMP_PATH.joinpath(f"compare_{ic}.html"), "w") as f:
-        f.write(df_compare.to_html())
-
+compare(model_ids)
 
 # %% More stuff
 # print(trace)

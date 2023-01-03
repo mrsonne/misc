@@ -19,6 +19,8 @@ import arviz as az
 THIS_PATH = Path(__file__).parent
 TMP_PATH = THIS_PATH.joinpath("tmp")
 TMP_PATH.mkdir(parents=True, exist_ok=True)
+RESULTS_PATH = THIS_PATH.joinpath("results")
+RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 
 from two_models import plot_cov_ellipse
 
@@ -269,6 +271,13 @@ def plot_traces(model_ids):
         fig.savefig(TMP_PATH.joinpath(f"trace_{key}.png"))
 
 
+def sign(x):
+    if x > 0:
+        return "+"
+    else:
+        return "-"
+
+
 def compare(model_ids, ics=["loo", "waic"]):
     """
     Load arviz traces from disk and compare
@@ -289,6 +298,31 @@ def compare(model_ids, ics=["loo", "waic"]):
             f.write(df_compare.to_html())
 
 
+def plot_true_model(X1, Y, b0, b1, sigma):
+    fig, ax = plt.subplots(1, 1, figsize=(20, 10))
+    x_model = np.linspace(-3, 3)
+    ax.set_title("Data")
+    ax.scatter(
+        X1,
+        Y,
+        s=144,
+        marker="o",
+        edgecolor="gray",
+        facecolor="gray",
+    )
+    for icmp, b1_ in enumerate(b1):
+        y_model = b0 + b1_ * x_model
+        ax.plot(
+            x_model,
+            y_model,
+            linestyle="-",
+            color="gray",
+            label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
+        )
+    ax.legend(fontsize=20)
+    return fig
+
+
 # %% Make data
 
 X1, Y, b0, b1, sigma = make_data()
@@ -296,7 +330,7 @@ size = X1.size
 
 # %% Run model
 
-n_components = 3
+n_components = 2
 trace, model = fit(
     X1,
     Y,
@@ -330,7 +364,7 @@ compare(model_ids)
 
 from pretty_html_table import build_table
 
-model_ids = [3]
+model_ids = [2]
 plot_traces(model_ids)
 
 traces = load_traces(model_ids)
@@ -344,22 +378,11 @@ for model_id, data in traces.items():
         f.write(build_table(df, "blue_light", index=True))
 
 
-# print(trace["b0"].shape)
-# b0_mean = np.apply_along_axis(np.mean, 0, trace["b0"])
-# b1_mean = np.apply_along_axis(np.mean, 0, trace["b1"])
-# print(b0_mean)[0]
-# print(b1_mean)
-
-# b1_mean = np.atleast_1d(b1_mean)
-
-
 # %% Plotting: checks
 
+fig = plot_true_model(X1, Y, b0, b1, sigma)
+fig.savefig(RESULTS_PATH.joinpath("true_model.png"))
 
-# # Gives errors
-# axs = az.plot_trace(trace)
-# fig = axs[0, 0].get_figure()
-# fig.savefig("regmix-trace.png")
 
 # %% sklearn
 
@@ -383,11 +406,6 @@ XY = np.stack((X1, Y), axis=1)
 labels = clsfier.fit_predict(XY)
 
 # %% Plotting: results
-def sign(x):
-    if x > 0:
-        return "+"
-    else:
-        return "-"
 
 
 fig, axs = plt.subplots(3, 1, figsize=(20, 30), sharex=True)
@@ -521,15 +539,5 @@ for mean, cov, color, label in zip(means, covs, colors, label_ids):
 ax.set_ylabel("y")
 ax.set_xlabel("x1")
 fig.savefig("regmix-classes.png")
-
-
-# # Proportion in each mixture components
-# counts, bins = np.histogram(avg_cat, bins=50)
-# fig, ax = plt.subplots(1, 1)
-# ax.hist(bins[:-1], bins, weights=counts, align="left")
-# ax.set_ylabel("count")
-# ax.set_xlabel("p_cat")
-# ax.set_xlim((0, 1))
-# fig.savefig("regmix-p_cat-posterior.png")
 
 print(pm.__version__)

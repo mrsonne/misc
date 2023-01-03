@@ -221,6 +221,11 @@ def make_data():
     # size = 250
     size1 = 25
     size2 = 35
+    size = size1 + size2
+
+    print("size", size1 + size2)
+    print("weight1", size1 / size)
+    print("weight1", size2 / size)
 
     # Predictor variable
     # X1_1 = np.random.randn(size)
@@ -291,15 +296,14 @@ size = X1.size
 
 # %% Run model
 
-n_components = 4
+n_components = 3
 trace, model = fit(
     X1,
     Y,
     n_components,
-    favor_few_components=False,
-    p_min=0.1,
-    # favor_few_components=True,
-    # p_min=0.1,
+    # favor_few_components=False,
+    # p_min=None,
+    favor_few_components=True,
     nsteps=20000,
     return_inferencedata=True,
     save_trace=True,
@@ -324,16 +328,20 @@ compare(model_ids)
 # idata.sel(draw=slice(100, None))
 
 
-# plot_traces(model_ids)
-
 from pretty_html_table import build_table
 
-model_ids = [1, 2]
+model_ids = [3]
+plot_traces(model_ids)
+
 traces = load_traces(model_ids)
 for model_id, data in traces.items():
-    df = az.summary(traces[model_id], var_names=["b0", "b1"])
+    try:
+        df = az.summary(traces[model_id], var_names=["b0", "b1", "p", "sigma"])
+    except KeyError:
+        df = az.summary(traces[model_id], var_names=["b0", "b1"])
+    print(df)
     with open(TMP_PATH.joinpath(f"summary_{model_id}.html"), "w") as f:
-        f.write(build_table(df, "blue_light"))
+        f.write(build_table(df, "blue_light", index=True))
 
 
 # print(trace["b0"].shape)

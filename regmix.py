@@ -324,9 +324,17 @@ compare(model_ids)
 # idata.sel(draw=slice(100, None))
 
 
-plot_traces(model_ids)
+# plot_traces(model_ids)
 
-# print(az.summary(traces["ncmp=3"], var_names=("b0, b1")))
+from pretty_html_table import build_table
+
+model_ids = [1, 2]
+traces = load_traces(model_ids)
+for model_id, data in traces.items():
+    df = az.summary(traces[model_id], var_names=["b0", "b1"])
+    with open(TMP_PATH.joinpath(f"summary_{model_id}.html"), "w") as f:
+        f.write(build_table(df, "blue_light"))
+
 
 # print(trace["b0"].shape)
 # b0_mean = np.apply_along_axis(np.mean, 0, trace["b0"])

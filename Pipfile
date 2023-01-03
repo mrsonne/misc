@@ -10,6 +10,7 @@ matplotlib = "*"
 pymc3 = "*"
 seaborn = "*"
 scikit-learn = "*"
+pretty-html-table = "*"
 
 [dev-packages]
 black = "*"

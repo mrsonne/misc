@@ -71,8 +71,7 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     print("perr2", perr2)
     print("s2", s2)
 
-    cmap = get_cmap(CMAP_NAME)
-    colors = itertools.cycle(cmap.colors)
+    colors = itertools.cycle(get_cmap(CMAP_NAME).colors)
 
     color1 = next(colors)
     sns.regplot(
@@ -426,28 +425,48 @@ def compare(model_ids, ics=["loo", "waic"]):
             f.write(df_compare.to_html())
 
 
-def plot_true_model(X1, Y, b0, b1, sigma):
+def plot_data(xs, ys):
+    fig, ax = plt.subplots(1, 1, figsize=(20, 10))
+    ax.set_title("Data")
+    for x, y in zip(xs, ys):
+        ax.scatter(
+            x,
+            y,
+            s=144,
+            marker="o",
+            color="gray",
+        )
+    return fig
+
+
+def plot_true_model(xs, ys, b0, b1, sigma):
     fig, ax = plt.subplots(1, 1, figsize=(20, 10))
     x_model = np.linspace(-3, 3)
-    ax.set_title("Data")
-    ax.scatter(
-        X1,
-        Y,
-        s=144,
-        marker="o",
-        edgecolor="gray",
-        facecolor="gray",
-    )
+    ax.set_title("Data and true models")
+
+    colors = itertools.cycle(get_cmap(CMAP_NAME).colors)
+    for x, y in zip(xs, ys):
+        color = next(colors)
+        ax.scatter(
+            x,
+            y,
+            s=144,
+            marker="o",
+            color=color,
+        )
+
+    colors = itertools.cycle(get_cmap(CMAP_NAME).colors)
     for icmp, b1_ in enumerate(b1):
+        color = next(colors)
         y_model = b0 + b1_ * x_model
         ax.plot(
             x_model,
             y_model,
             linestyle="-",
-            color="gray",
+            color=color,
             label=f"Cmp {icmp}: {b0} {sign(b1_)} {np.abs(b1_)}x + N(0,{sigma})",
         )
-    ax.legend(fontsize=20)
+    ax.legend(fontsize=20, title="Y = b0 + b1*x + N(0, s)")
     return fig
 
 
@@ -509,9 +528,9 @@ for model_id, data in traces.items():
 
 # %% Plotting: checks
 
-fig = plot_true_model(X1, Y, b0, b1, sigma)
+fig = plot_data((X1_1, X1_2), (Y1, Y2))
+fig = plot_true_model((X1_1, X1_2), (Y1, Y2), b0, b1, sigma)
 fig.savefig(RESULTS_PATH.joinpath("true_model.png"))
-
 fig = curve_fit_2cmp(X1_1, Y1, X1_2, Y2)
 
 

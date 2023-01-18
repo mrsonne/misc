@@ -18,6 +18,7 @@ import matplotlib.colors as mcolors
 from matplotlib.cm import get_cmap
 import theano.tensor as tt
 import arviz as az
+import statsmodels.api as sm
 
 from two_models import plot_parameters
 
@@ -42,6 +43,24 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     fig.suptitle("MLE parameters inferred from true classes")
     popt1, pcov1 = curve_fit(model, x1, y1)
     popt2, pcov2 = curve_fit(model, x2, y2)
+
+    x = sm.add_constant(x1)
+    lin_model = sm.OLS(y1, x)
+    results = lin_model.fit()
+    # print(results.summary())
+    print("Statsmodels")
+    print("params 1", results.params)
+    print("std err 1", results.bse)
+    print("cov1", results.cov_params())
+
+    print("SciPy Opt")
+    print("popt1", popt1)
+    print("perr1", np.sqrt(np.diag(pcov1)))
+    print("pcov1", pcov1)
+
+    print("popt2", popt2)
+    print("pcov2", pcov2)
+    print("perr2", np.sqrt(np.diag(pcov2)))
 
     cmap = get_cmap(CMAP_NAME)
     colors = itertools.cycle(cmap.colors)
@@ -90,7 +109,6 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     axs[0].set_ylabel("y", fontsize=NORMAL_FONTSIZE)
     axs[0].legend(fontsize=20)
 
-    print(pcov1)
     plot_parameters(popt1, pcov1, axs[1], "CMP1", nstds=[2], color=color1)
     plot_parameters(popt2, pcov2, axs[1], "CMP2", nstds=[2], color=color2)
     axs[1].legend(fontsize=20)

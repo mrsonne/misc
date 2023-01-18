@@ -11,6 +11,7 @@ pymc3 = "*"
 seaborn = "*"
 scikit-learn = "*"
 pretty-html-table = "*"
+statsmodels = "*"
 
 [dev-packages]
 black = "*"

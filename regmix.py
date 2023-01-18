@@ -44,6 +44,14 @@ def curve_fit_2cmp(x1, y1, x2, y2):
     popt1, pcov1 = curve_fit(model, x1, y1)
     popt2, pcov2 = curve_fit(model, x2, y2)
 
+    # Standard errors
+    perr1 = np.sqrt(np.diag(pcov1))
+    perr2 = np.sqrt(np.diag(pcov2))
+
+    # sigma
+    s1 = np.std(model(x1, *popt1) - y1)
+    s2 = np.std(model(x2, *popt2) - y2)
+
     x = sm.add_constant(x1)
     lin_model = sm.OLS(y1, x)
     results = lin_model.fit()
@@ -55,12 +63,14 @@ def curve_fit_2cmp(x1, y1, x2, y2):
 
     print("SciPy Opt")
     print("popt1", popt1)
-    print("perr1", np.sqrt(np.diag(pcov1)))
+    print("perr1", perr1)
     print("pcov1", pcov1)
+    print("s1", s1)
 
     print("popt2", popt2)
     print("pcov2", pcov2)
-    print("perr2", np.sqrt(np.diag(pcov2)))
+    print("perr2", perr2)
+    print("s2", s2)
 
     cmap = get_cmap(CMAP_NAME)
     colors = itertools.cycle(cmap.colors)

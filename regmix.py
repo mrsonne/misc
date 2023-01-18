@@ -38,7 +38,7 @@ def model(x, b0, b1):
     return b1 * x + b0
 
 
-def curve_fit_2cmp(xs, ys):
+def plot_curve_fit(xs, ys):
     fig, axs = plt.subplots(2, 1, figsize=(20, 20))
 
     colors = itertools.cycle(get_cmap(CMAP_NAME).colors)
@@ -505,7 +505,7 @@ for model_id, data in traces.items():
 fig = plot_data((X1_1, X1_2), (Y1, Y2))
 fig = plot_true_model((X1_1, X1_2), (Y1, Y2), b0, b1, sigma)
 fig.savefig(RESULTS_PATH.joinpath("true_model.png"))
-fig = curve_fit_2cmp((X1_1, X1_2), (Y1, Y2))
+fig = plot_curve_fit((X1_1, X1_2), (Y1, Y2))
 
 
 # %% sklearn

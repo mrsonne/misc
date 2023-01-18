@@ -40,7 +40,6 @@ def model(x, b0, b1):
 
 def curve_fit_2cmp(x1, y1, x2, y2):
     fig, axs = plt.subplots(2, 1, figsize=(20, 20))
-    fig.suptitle("MLE parameters inferred from true classes")
     popt1, pcov1 = curve_fit(model, x1, y1)
     popt2, pcov2 = curve_fit(model, x2, y2)
 
@@ -127,6 +126,9 @@ def curve_fit_2cmp(x1, y1, x2, y2):
 
     for ax in axs.flat:
         ax.tick_params(axis="both", which="major", labelsize=NORMAL_FONTSIZE)
+
+    fig.suptitle("MLE parameters inferred from true classes")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
 
     return fig
 
@@ -540,7 +542,7 @@ labels = clsfier.fit_predict(XY)
 fig, axs = plt.subplots(3, 1, figsize=(20, 30), sharex=True)
 x_model = np.linspace(-3, 3)
 ax = axs[0]
-ax.set_title("Data")
+ax.set_title("Data and underlying models components")
 ax.scatter(
     X1,
     Y,

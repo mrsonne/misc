@@ -38,87 +38,61 @@ def model(x, b0, b1):
     return b1 * x + b0
 
 
-def curve_fit_2cmp(x1, y1, x2, y2):
+def curve_fit_2cmp(xs, ys):
     fig, axs = plt.subplots(2, 1, figsize=(20, 20))
-    popt1, pcov1 = curve_fit(model, x1, y1)
-    popt2, pcov2 = curve_fit(model, x2, y2)
-
-    # Standard errors
-    perr1 = np.sqrt(np.diag(pcov1))
-    perr2 = np.sqrt(np.diag(pcov2))
-
-    # sigma
-    s1 = np.std(model(x1, *popt1) - y1)
-    s2 = np.std(model(x2, *popt2) - y2)
-
-    x = sm.add_constant(x1)
-    lin_model = sm.OLS(y1, x)
-    results = lin_model.fit()
-    # print(results.summary())
-    print("Statsmodels")
-    print("params 1", results.params)
-    print("std err 1", results.bse)
-    print("cov1", results.cov_params())
-
-    print("SciPy Opt")
-    print("popt1", popt1)
-    print("perr1", perr1)
-    print("pcov1", pcov1)
-    print("s1", s1)
-
-    print("popt2", popt2)
-    print("pcov2", pcov2)
-    print("perr2", perr2)
-    print("s2", s2)
 
     colors = itertools.cycle(get_cmap(CMAP_NAME).colors)
+    for i, (x, y) in enumerate(zip(xs, ys), 1):
+        popt, pcov = curve_fit(model, x, y)
 
-    color1 = next(colors)
-    sns.regplot(
-        x=x1,
-        y=y1,
-        ci=95,
-        order=1,
-        line_kws={
-            "label": f"CMP1. MLE={popt1}",
-            "color": color1,
-        },
-        scatter_kws={
-            "s": 144,
-        },
-        seed=1,
-        label="CMP1 data.",
-        truncate=False,
-        color=color1,
-        ax=axs[0],
-    )
+        # Standard errors
+        perr = np.sqrt(np.diag(pcov))
 
-    color2 = next(colors)
-    sns.regplot(
-        x=x2,
-        y=y2,
-        ci=95,
-        order=1,
-        line_kws={
-            "label": f"CMP2. MLE={popt2}",
-            "color": color2,
-        },
-        scatter_kws={
-            "s": 144,
-        },
-        label="CMP2 data.",
-        seed=1,
-        truncate=False,
-        color=color2,
-        ax=axs[0],
-    )
+        # sigma
+        sigma = np.std(model(x, *popt) - y)
+
+        x_ = sm.add_constant(x)
+        lin_model = sm.OLS(y, x_)
+        results = lin_model.fit()
+        # print(results.summary())
+        print("Statsmodels")
+        print("params", results.params)
+        print("std err", results.bse)
+        print("cov1", results.cov_params())
+
+        print("SciPy Opt")
+        print("popt", popt)
+        print("perr", perr)
+        print("pcov", pcov)
+        print("sigma", sigma)
+
+        color = next(colors)
+
+        sns.regplot(
+            x=x,
+            y=y,
+            ci=95,
+            order=1,
+            line_kws={
+                "label": f"CMP{i}. MLE={popt}",
+                "color": color,
+            },
+            scatter_kws={
+                "s": 144,
+            },
+            seed=1,
+            label=f"CMP{i} data.",
+            truncate=False,
+            color=color,
+            ax=axs[0],
+        )
+
+        plot_parameters(popt, pcov, axs[1], f"CMP{i}", nstds=[2], color=color)
 
     axs[0].set_xlabel("x", fontsize=NORMAL_FONTSIZE)
     axs[0].set_ylabel("y", fontsize=NORMAL_FONTSIZE)
     axs[0].legend(fontsize=20)
 
-    plot_parameters(popt1, pcov1, axs[1], "CMP1", nstds=[2], color=color1)
-    plot_parameters(popt2, pcov2, axs[1], "CMP2", nstds=[2], color=color2)
     axs[1].legend(fontsize=20)
     axs[1].set_xlabel("b0", fontsize=NORMAL_FONTSIZE)
     axs[1].set_ylabel("b1", fontsize=NORMAL_FONTSIZE)
@@ -531,7 +505,7 @@ for model_id, data in traces.items():
 fig = plot_data((X1_1, X1_2), (Y1, Y2))
 fig = plot_true_model((X1_1, X1_2), (Y1, Y2), b0, b1, sigma)
 fig.savefig(RESULTS_PATH.joinpath("true_model.png"))
-fig = curve_fit_2cmp(X1_1, Y1, X1_2, Y2)
+fig = curve_fit_2cmp((X1_1, X1_2), (Y1, Y2))
 
 
 # %% sklearn

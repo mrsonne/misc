@@ -40,6 +40,7 @@ def model(x, b0, b1):
 
 def plot_bayesian_fit(xs, ys, nsteps=25000):
     # Bayesian with true classes
+    # TODO: add posterior predictive check
     n_components = 1
     point_estimate = "mean"
     var_names = ["b0", "b1", "sigma"]

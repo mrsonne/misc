@@ -12,6 +12,7 @@ seaborn = "*"
 scikit-learn = "*"
 pretty-html-table = "*"
 statsmodels = "*"
+watermark = "*"
 
 [dev-packages]
 black = "*"

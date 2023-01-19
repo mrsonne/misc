@@ -51,9 +51,11 @@ def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
     fig_pair, axs_pair = plt.subplots(len(xs), 1, figsize=(20, 20))
 
     if do_ppc is not None:
-        fig_ppc, axs_ppc = plt.subplots(len(xs), 1, figsize=(20, 20))
+        fig_gppc, axs_gppc = plt.subplots(len(xs), 1, figsize=(20, 20))
+        fig_mppc, axs_mppc = plt.subplots(len(xs), 1, figsize=(20, 20))
     else:
-        fig_ppc = None
+        fig_gppc = None
+        fig_mppc = None
 
     for i, (x, y) in enumerate(zip(xs, ys)):
 
@@ -90,10 +92,36 @@ def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
                 )
 
             az.plot_ppc(
-                az.from_pymc3(posterior_predictive=ppc, model=model), ax=axs_ppc[i]
+                az.from_pymc3(posterior_predictive=ppc, model=model), ax=axs_gppc[i]
             )
 
-    return fig_posterior, fig_pair, fig_ppc
+            mu_pp = (ppc["b0"] + ppc["b1"] * x[:, None]).T
+            axs_mppc[i].plot(x, y, "o", ms=4, alpha=0.4, label="Data")
+            axs_mppc[i].plot(x, mu_pp.mean(0), label="Mean outcome", alpha=0.6)
+            az.plot_hdi(
+                x,
+                mu_pp,
+                ax=axs_mppc[i],
+                fill_kwargs={"alpha": 0.8, "label": "Mean outcome 94% HPD"},
+            )
+
+            az.plot_hdi(
+                x,
+                ppc["y"],
+                ax=axs_mppc[i],
+                fill_kwargs={
+                    "alpha": 0.8,
+                    "color": "#a1dab4",
+                    "label": "Outcome 94% HPD",
+                },
+            )
+
+            axs_mppc[i].set_xlabel("Predictor")
+            axs_mppc[i].set_ylabel("Outcome")
+            axs_mppc[i].set_title("Posterior predictive checks")
+            axs_mppc[i].legend(ncol=2, fontsize=12)
+
+    return fig_posterior, fig_pair, fig_gppc, fig_mppc
 
 
 def plot_curve_fit(xs, ys):
@@ -568,8 +596,8 @@ fig = plot_curve_fit((X1_1, X1_2), (Y1, Y2))
 fig.savefig(RESULTS_PATH.joinpath("curve_fit.png"))
 
 # %% Bayesian
-do_ppc = False
-fig, fig_pair, fig_ppc = plot_bayesian_fit(
+do_ppc = True
+fig, fig_pair, fig_gppc, fig_mppc = plot_bayesian_fit(
     (X1_1, X1_2),
     (Y1, Y2),
     nsteps=10000,
@@ -578,7 +606,8 @@ fig, fig_pair, fig_ppc = plot_bayesian_fit(
 fig.savefig(RESULTS_PATH.joinpath("bayesian_posterior.png"))
 fig_pair.savefig(RESULTS_PATH.joinpath("bayesian_pair.png"))
 if do_ppc:
-    fig_ppc.savefig(RESULTS_PATH.joinpath("bayesian_ppc.png"))
+    fig_gppc.savefig(RESULTS_PATH.joinpath("bayesian_gppc.png"))
+    fig_mppc.savefig(RESULTS_PATH.joinpath("bayesian_mppc.png"))
 
 
 # %% sklearn

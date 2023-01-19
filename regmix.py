@@ -70,6 +70,7 @@ def plot_bayesian_fit(xs, ys, nsteps=25000):
             trace,
             var_names=var_names_pairs,
             kind="kde",
+            point_estimate="mean",
             divergences=True,
             textsize=18,
             ax=axs_pair[i],

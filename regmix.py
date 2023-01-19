@@ -43,8 +43,10 @@ def plot_bayesian_fit(xs, ys, nsteps=25000):
     n_components = 1
     point_estimate = "mean"
     var_names = ["b0", "b1", "sigma"]
+    var_names_pairs = ["b0", "b1"]
 
     fig, axs = plt.subplots(len(xs), len(var_names), figsize=(20, 20))
+    fig_pair, axs_pair = plt.subplots(len(xs), 1, figsize=(20, 20))
     for i, (x, y) in enumerate(zip(xs, ys)):
 
         trace, model = fit(
@@ -63,7 +65,16 @@ def plot_bayesian_fit(xs, ys, nsteps=25000):
             ax=axs[i, :],
         )
 
-    return fig
+        az.plot_pair(
+            trace,
+            var_names=var_names_pairs,
+            kind="kde",
+            divergences=True,
+            textsize=18,
+            ax=axs_pair[i],
+        )
+
+    return fig, fig_pair
 
 
 def plot_curve_fit(xs, ys):
@@ -102,7 +113,7 @@ def plot_curve_fit(xs, ys):
             ci=95,
             order=1,
             line_kws={
-                "label": f"CMP{i}. MLE={popt}",
+                "label": f"CMP{i}. MLE={popt} (σ={sigma})",
                 "color": color,
             },
             scatter_kws={
@@ -538,8 +549,9 @@ fig = plot_curve_fit((X1_1, X1_2), (Y1, Y2))
 fig.savefig(RESULTS_PATH.joinpath("curve_fit.png"))
 
 # %% Bayesian
-fig = plot_bayesian_fit((X1_1, X1_2), (Y1, Y2), nsteps=5000)
-fig.savefig(RESULTS_PATH.joinpath("bayesian_fit.png"))
+fig, fig_pair = plot_bayesian_fit((X1_1, X1_2), (Y1, Y2), nsteps=10000)
+fig.savefig(RESULTS_PATH.joinpath("bayesian_posterior.png"))
+fig_pair.savefig(RESULTS_PATH.joinpath("bayesian_pair.png"))
 
 
 # %% sklearn

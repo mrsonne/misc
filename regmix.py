@@ -40,8 +40,7 @@ def model(x, b0, b1):
 
 
 def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
-    # Bayesian with true classes
-    # TODO: add posterior predictive check
+    # Bayesian inference for the true classes
     n_components = 1
     point_estimate = "mean"
     var_names = ["b0", "b1", "sigma"]
@@ -49,6 +48,8 @@ def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
 
     fig_posterior, axs = plt.subplots(len(xs), len(var_names), figsize=(20, 20))
     fig_pair, axs_pair = plt.subplots(len(xs), 1, figsize=(20, 20))
+
+    hdi_prob = az.rcParams["stats.hdi_prob"]
 
     if do_ppc is not None:
         fig_gppc, axs_gppc = plt.subplots(len(xs), 1, figsize=(20, 20))
@@ -102,7 +103,7 @@ def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
                 x,
                 mu_pp,
                 ax=axs_mppc[i],
-                fill_kwargs={"alpha": 0.8, "label": "Mean outcome 94% HPD"},
+                fill_kwargs={"alpha": 0.8, "label": f"Mean outcome {hdi_prob} % HPD"},
             )
 
             az.plot_hdi(
@@ -112,7 +113,7 @@ def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
                 fill_kwargs={
                     "alpha": 0.8,
                     "color": "#a1dab4",
-                    "label": "Outcome 94% HPD",
+                    "label": f"Outcome {hdi_prob} % HPD",
                 },
             )
 
@@ -381,7 +382,7 @@ def fit(
 
 # import seaborn as sns
 
-# %% Data
+
 def make_data():
     np.random.seed(123)
     b0 = 0

@@ -38,6 +38,34 @@ def model(x, b0, b1):
     return b1 * x + b0
 
 
+def plot_bayesian_fit(xs, ys, nsteps=25000):
+    # Bayesian with true classes
+    n_components = 1
+    point_estimate = "mean"
+    var_names = ["b0", "b1", "sigma"]
+
+    fig, axs = plt.subplots(len(xs), len(var_names), figsize=(20, 20))
+    for i, (x, y) in enumerate(zip(xs, ys)):
+
+        trace, model = fit(
+            x,
+            y,
+            n_components,
+            nsteps=nsteps,
+            return_inferencedata=True,
+            save_trace=False,
+        )
+
+        az.plot_posterior(
+            trace,
+            var_names=var_names,
+            point_estimate=point_estimate,
+            ax=axs[i, :],
+        )
+
+    return fig
+
+
 def plot_curve_fit(xs, ys):
     fig, axs = plt.subplots(2, 1, figsize=(20, 20))
 
@@ -502,10 +530,16 @@ for model_id, data in traces.items():
 
 # %% Plotting: checks
 
-fig = plot_data((X1_1, X1_2), (Y1, Y2))
 fig = plot_true_model((X1_1, X1_2), (Y1, Y2), b0, b1, sigma)
 fig.savefig(RESULTS_PATH.joinpath("true_model.png"))
+fig = plot_data((X1_1, X1_2), (Y1, Y2))
+fig.savefig(RESULTS_PATH.joinpath("anonymous_data.png"))
 fig = plot_curve_fit((X1_1, X1_2), (Y1, Y2))
+fig.savefig(RESULTS_PATH.joinpath("curve_fit.png"))
+
+# %% Bayesian
+fig = plot_bayesian_fit((X1_1, X1_2), (Y1, Y2), nsteps=5000)
+fig.savefig(RESULTS_PATH.joinpath("bayesian_fit.png"))
 
 
 # %% sklearn

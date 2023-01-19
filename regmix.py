@@ -29,6 +29,7 @@ TMP_PATH.mkdir(parents=True, exist_ok=True)
 RESULTS_PATH = THIS_PATH.joinpath("results")
 RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 NORMAL_FONTSIZE = 20
+RANDOM_SEED = 17
 CMAP_NAME = "tab10"
 from two_models import plot_cov_ellipse
 
@@ -38,7 +39,7 @@ def model(x, b0, b1):
     return b1 * x + b0
 
 
-def plot_bayesian_fit(xs, ys, nsteps=25000):
+def plot_bayesian_fit(xs, ys, nsteps=25000, do_ppc: bool = True):
     # Bayesian with true classes
     # TODO: add posterior predictive check
     n_components = 1
@@ -46,8 +47,14 @@ def plot_bayesian_fit(xs, ys, nsteps=25000):
     var_names = ["b0", "b1", "sigma"]
     var_names_pairs = ["b0", "b1"]
 
-    fig, axs = plt.subplots(len(xs), len(var_names), figsize=(20, 20))
+    fig_posterior, axs = plt.subplots(len(xs), len(var_names), figsize=(20, 20))
     fig_pair, axs_pair = plt.subplots(len(xs), 1, figsize=(20, 20))
+
+    if do_ppc is not None:
+        fig_ppc, axs_ppc = plt.subplots(len(xs), 1, figsize=(20, 20))
+    else:
+        fig_ppc = None
+
     for i, (x, y) in enumerate(zip(xs, ys)):
 
         trace, model = fit(
@@ -76,7 +83,17 @@ def plot_bayesian_fit(xs, ys, nsteps=25000):
             ax=axs_pair[i],
         )
 
-    return fig, fig_pair
+        if do_ppc:
+            with model:
+                ppc = pm.sample_posterior_predictive(
+                    trace, var_names=["b0", "b1", "y"], random_seed=RANDOM_SEED
+                )
+
+            az.plot_ppc(
+                az.from_pymc3(posterior_predictive=ppc, model=model), ax=axs_ppc[i]
+            )
+
+    return fig_posterior, fig_pair, fig_ppc
 
 
 def plot_curve_fit(xs, ys):
@@ -551,9 +568,17 @@ fig = plot_curve_fit((X1_1, X1_2), (Y1, Y2))
 fig.savefig(RESULTS_PATH.joinpath("curve_fit.png"))
 
 # %% Bayesian
-fig, fig_pair = plot_bayesian_fit((X1_1, X1_2), (Y1, Y2), nsteps=10000)
+do_ppc = False
+fig, fig_pair, fig_ppc = plot_bayesian_fit(
+    (X1_1, X1_2),
+    (Y1, Y2),
+    nsteps=10000,
+    do_ppc=do_ppc,
+)
 fig.savefig(RESULTS_PATH.joinpath("bayesian_posterior.png"))
 fig_pair.savefig(RESULTS_PATH.joinpath("bayesian_pair.png"))
+if do_ppc:
+    fig_ppc.savefig(RESULTS_PATH.joinpath("bayesian_ppc.png"))
 
 
 # %% sklearn
